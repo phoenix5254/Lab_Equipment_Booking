@@ -1,22 +1,37 @@
-package Model;
-import java.io.Serial;
-import java.io.Serializable;
+package com_java_users;
+
 import java.security.SecureRandom;
 import java.util.Base64;
+
+import com_java_users.Enums.Roles;
+
+import java.io.Serializable;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+
+
 public class User implements Serializable {
-    @Serial
-    private static final long serialVersionUID = 1L;
+   
     private String userID;
     private String firstName;
     private String lastName;
     private String email;
     protected String password;
-    protected byte[] salt;
-    private Roles role;
+    protected Roles role;
+    byte[] salt = new byte[16];
 
+    // used for hashmap when updated mutliple fields in sql
+    static int getColumn(){ final int COLUMN=6; return COLUMN;}; 
+
+    public User(){
+        userID="";
+        firstName="";
+        lastName="";
+        email="";
+        password="";
+        this.role=Roles.VISITOR;// use to keep the user role during credentials update
+    }
     public User(String userID, String firstName, String lastName, String email, String password, Roles role) {
         this.userID = userID;
         this.firstName = firstName;
@@ -24,7 +39,7 @@ public class User implements Serializable {
         this.email = email;
         this.password = password;
         this.role = role;
-        this.salt = generateSalt();
+        generateSalt();
         encryptPassword();
     }
     public User(String userID, String firstName, String lastName, String email, String password) {
@@ -33,16 +48,14 @@ public class User implements Serializable {
         this.lastName = lastName;
         this.email = email;
         this.password = password;
-        this.salt = generateSalt();
+        generateSalt();
         encryptPassword();
     }
 
-    private byte[] generateSalt() {
+    private void generateSalt() {
         // Generate a random salt value
         SecureRandom random = new SecureRandom();
-        byte[] salt = new byte[16];
         random.nextBytes(salt);
-        return salt;
     }
 
     private void encryptPassword() {
@@ -59,7 +72,7 @@ public class User implements Serializable {
     }
     private void resetPassword(String newPassword) {
         this.password = newPassword;
-        this.salt = generateSalt();
+        generateSalt();
         encryptPassword();
     }
     public boolean verifyPassword(String inputPassword, String storedPassword, byte[] storedSalt) {
@@ -127,11 +140,7 @@ public class User implements Serializable {
     }
 
     public void setRole(Roles role) {
-        if(role == Roles.ADMIN){
-            this.role = role;
-        } else {
-            throw new UnsupportedOperationException("Only Admin can set role");
-        }
+            this.role = role; 
     }
 
     @Override

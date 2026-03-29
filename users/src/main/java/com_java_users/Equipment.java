@@ -1,6 +1,9 @@
-package Model;
+package com_java_users;
+
 import java.io.Serial;
 import java.io.Serializable;
+
+import com_java_users.Enums.EquipStatus;
 
 public class Equipment implements Serializable {
     @Serial

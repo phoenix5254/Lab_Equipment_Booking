@@ -1,4 +1,4 @@
-package Model;
+package com_java_users;
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.ArrayList;

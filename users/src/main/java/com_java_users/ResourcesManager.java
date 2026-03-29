@@ -1,5 +1,9 @@
-package Model;
+package com_java_users;
 import java.util.ArrayList;
+
+import org.hibernate.SessionFactory;
+
+import com_java_users.Enums.EquipStatus;
 
 public class ResourcesManager extends Equipment implements Seats {
     private Lab lab;
@@ -8,6 +12,8 @@ public class ResourcesManager extends Equipment implements Seats {
     static int alphaIndex=0; // index of lab
     ArrayList<Equipment> ListOfEquipment = new ArrayList<Equipment>();
     
+    //public static SessionFactory sessionFactory;
+
     public ResourcesManager() {
         super();   
         lab = new Lab(); 

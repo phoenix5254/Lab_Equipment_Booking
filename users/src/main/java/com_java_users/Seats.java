@@ -1,5 +1,6 @@
-package Model;
- import java.io.Serializable;
+package com_java_users;
+
+import java.io.Serializable;
 
 public abstract interface Seats extends Serializable{
        abstract void addSeats(int seatCapacity);      

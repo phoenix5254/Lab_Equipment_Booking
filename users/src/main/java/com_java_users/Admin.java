@@ -1,10 +1,11 @@
-package Model;
+package com_java_users;
+
+import com_java_users.Enums.Roles;
 
 public class Admin extends User{
-    private Roles myRole;
     private User admin;
     public Admin(String userID, String firstName, String lastName, String email, String password) {
-        super(userID, firstName, lastName, email, password,myRole=Roles.ADMIN);
+        super(userID, firstName, lastName, email, password,Roles.ADMIN);
     }
     public User getAdmin(){ return admin; } 
     public void review(){}
