@@ -1,15 +1,23 @@
-package model.resources;
+package model.resource;
 
 import java.io.Serial;
 import java.io.Serializable;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import model.users.Enums.EquipStatus;
+@Entity
+@Table(name="equipment")
 
 public class Equipment implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
-    private String equipName;
+    @Id
+    @Column(name="equipId")
     private String equipId;
+    private String equipName;
     private String labId;
     private EquipStatus status;
     private Integer qtyOnHand;

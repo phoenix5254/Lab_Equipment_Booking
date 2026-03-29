@@ -1,14 +1,21 @@
-package model.resources;
+package model.resource;
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+
+@Entity
+@Table(name="labs")
 public class Lab implements Serializable {
 
-    @Serial
-    private static final long serialVersionUID = 1L;
-
+   // @Serial  private static final long serialVersionUID = 1L;
+    @Id
+    @Column(name="labId")
     private String labId;
     private String labName;
     private String location;
@@ -21,7 +28,7 @@ public class Lab implements Serializable {
         labId = "";
         labName = "";
         location = "";
-        seatCapacity = 0;
+        seatCapacity = (int)0;
     }
 
     public Lab(String labId, String labName,String location, int seatCapacity) {
