@@ -31,6 +31,10 @@ public class Driver {
                     JOptionPane.INFORMATION_MESSAGE);
         }
     }
+    public static Connection  getConnection() {
+        connectDatabse();
+        return myConn;
+    }
 
     static void createUser(User user) {
         String sql = "INSERT INTO users (userID, firstName, lastName, email, password, role) VALUES (?, ?, ?, ?, ?, ?)";

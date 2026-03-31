@@ -6,6 +6,8 @@ import java.io.Serializable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import model.users.Enums.EquipStatus;
 @Entity
@@ -18,7 +20,9 @@ public class Equipment implements Serializable {
     @Column(name="equipId")
     private String equipId;
     private String equipName;
-    private String labId;
+    @ManyToOne
+    @JoinColumn(name="labId")
+    private Lab lab;
     private EquipStatus status;
     private Integer qtyOnHand;
     private Integer qtyAvailable;
@@ -26,24 +30,24 @@ public class Equipment implements Serializable {
     public Equipment() {
         this.equipId = "";
         this.equipName = "";
-        this.labId = "";
+        this.lab = new Lab();
         this.status = EquipStatus.UNKNOWN;
         this.qtyOnHand = null;
         this.qtyAvailable = null;
     }
-    public Equipment(String equipId, String equipName, String labId, EquipStatus status, int qtyOnHand, int qtyAvailable) {
+    public Equipment(String equipId, String equipName, Lab lab, EquipStatus status, int qtyOnHand, int qtyAvailable) {
         this.equipId = equipId;
         this.equipName = equipName;
-        this.labId = labId;
+        this.lab = lab;
         this.status = status;
         this.qtyOnHand = qtyOnHand;
         this.qtyAvailable = qtyAvailable;
     }
     // Default where equipment is available
-     public Equipment(String equipId, String equipName, String labId, int qtyOnHand, int qtyAvailable) {
+     public Equipment(String equipId, String equipName, Lab lab, int qtyOnHand, int qtyAvailable) {
         this.equipId = equipId;
         this.equipName = equipName;
-        this.labId = labId;
+        this.lab = lab;
         this.status = EquipStatus.AVAILABLE;
         this.qtyOnHand = qtyOnHand;
         this.qtyAvailable = qtyAvailable;
@@ -53,8 +57,8 @@ public class Equipment implements Serializable {
     public void setEquipName(String equipName){ this.equipName = equipName; }
     public String getEquipId(){ return equipId; }
     public void setEquipId(String equipId){ this.equipId = equipId; }
-    public String getLabId(){ return labId; }
-    public void setLabId(String labId){ this.labId = labId; }
+    public Lab getLab(){ return lab; }
+    public void setLab(Lab lab){ this.lab = lab; }
     public EquipStatus getStatus(){ return status; }
     public void setStatus(EquipStatus status){ this.status = status; }
     public int getQtyAvailable(){ return qtyAvailable; }

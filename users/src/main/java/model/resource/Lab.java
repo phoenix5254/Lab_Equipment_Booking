@@ -1,12 +1,13 @@
 package model.resource;
-import java.io.Serial;
+
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.List;
+
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
 @Entity
@@ -19,9 +20,10 @@ public class Lab implements Serializable {
     private String labId;
     private String labName;
     private String location;
-    private int seatCapacity;
-   // private EquipStatus status;
-    private String seatDisplay[][]; // seatID and status
+    private int seatCapacity; // number of seats in the lab
+    @OneToMany
+    private ArrayList<SeatRecord> seatDisplay; // seatID and status
+    @OneToMany
     private ArrayList<Equipment> equipmentList;
 
     public Lab() {
@@ -29,6 +31,8 @@ public class Lab implements Serializable {
         labName = "";
         location = "";
         seatCapacity = (int)0;
+        seatDisplay = new ArrayList<SeatRecord>();
+        equipmentList = new ArrayList<Equipment>();
     }
 
     public Lab(String labId, String labName,String location, int seatCapacity) {
@@ -70,37 +74,24 @@ public class Lab implements Serializable {
         this.seatCapacity = seatCapacity;
     }
 
-    public String[][] getSeatDisplay() {
+    public ArrayList<SeatRecord> getSeatDisplay() {
         return seatDisplay;
     }
-    public String printSeatDisplayList() {
-        StringBuilder sb = new StringBuilder();
-        for(int i=0;i<seatDisplay.length;i++){
-            for(int j=0;j<seatDisplay[i].length;j++){
-                sb.append(seatDisplay[i][j]).append(" ");
-                
-            }
-           if((i+1)%2 == 0) sb.append("\n");
-        }
-        return sb.toString();
-    }
+    
 
-    public void setSeatDisplay(String[][] seatDisplay) {
-        this.seatDisplay = seatDisplay;
-    }
+    /*public void setSeatDisplay(SeatRecord seatDisplay2) {
+        this.seatDisplay = seatDisplay2;
+    }*/
 
-    public List<Equipment> getEquipmentList() {
+    public ArrayList<Equipment> getEquipmentList() {
         return equipmentList;
     }
 
-    public void setEquipmentList(ArrayList<Equipment> equipmentList) {
-        this.equipmentList = equipmentList;
-    }
+    /*public void setEquipmentList(Equipment equipmentList) {
+        this.equipmentList = equipmentList
+    }*/
     public String mainToString() {
         return "Lab ID:" + labId + "\nLab Name:" + labName + "\nLocation:" + location + "\nSeat Capacity:" + seatCapacity;
-    }
-    public String specificToString(){
-        return "Lab ID:" + labId + "\nLab Name:" + labName + "\nLocation:" + location + "\nSeat Capacity:" + seatCapacity+"\n"+"Seaing Placement\n"+printSeatDisplayList();
     }
    
 
