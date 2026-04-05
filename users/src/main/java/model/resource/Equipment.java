@@ -23,7 +23,7 @@ public class Equipment implements Serializable {
     @ManyToOne
     @JoinColumn(name="labId")
     private Lab lab;
-    private EquipStatus status;
+    private String status;
     private Integer qtyOnHand;
     private Integer qtyAvailable;
 
@@ -31,7 +31,7 @@ public class Equipment implements Serializable {
         this.equipId = "";
         this.equipName = "";
         this.lab = new Lab();
-        this.status = EquipStatus.UNKNOWN;
+        this.status = EquipStatus.UNKNOWN.toString();
         this.qtyOnHand = null;
         this.qtyAvailable = null;
     }
@@ -39,7 +39,7 @@ public class Equipment implements Serializable {
         this.equipId = equipId;
         this.equipName = equipName;
         this.lab = lab;
-        this.status = status;
+        this.status = status.toString();
         this.qtyOnHand = qtyOnHand;
         this.qtyAvailable = qtyAvailable;
     }
@@ -48,7 +48,7 @@ public class Equipment implements Serializable {
         this.equipId = equipId;
         this.equipName = equipName;
         this.lab = lab;
-        this.status = EquipStatus.AVAILABLE;
+        this.status = EquipStatus.AVAILABLE.toString();
         this.qtyOnHand = qtyOnHand;
         this.qtyAvailable = qtyAvailable;
     }
@@ -59,8 +59,8 @@ public class Equipment implements Serializable {
     public void setEquipId(String equipId){ this.equipId = equipId; }
     public Lab getLab(){ return lab; }
     public void setLab(Lab lab){ this.lab = lab; }
-    public EquipStatus getStatus(){ return status; }
-    public void setStatus(EquipStatus status){ this.status = status; }
+    public String getStatus(){ return status; }
+    public void setStatus(String status){ this.status = status; }
     public int getQtyAvailable(){ return qtyAvailable; }
     public void setQtyAvailable(int qtyAvailable){ this.qtyAvailable = qtyAvailable; }
     public int getQtyOnHand(){ return qtyOnHand; }

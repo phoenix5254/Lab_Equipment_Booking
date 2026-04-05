@@ -1,5 +1,5 @@
 package model.users.Enums;
 
 public enum EquipStatus {
-    AVAILABLE, BOOKED,UNKNOWN, MAINTENANCE;
+    AVAILABLE,BOOKED,UNKNOWN,MAINTENANCE;
 }

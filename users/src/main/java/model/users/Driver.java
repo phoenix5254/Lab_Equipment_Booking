@@ -27,8 +27,7 @@ public class Driver {
                     "JDBC Connection Status", JOptionPane.ERROR_MESSAGE);
         }
         if (myConn != null) {
-            JOptionPane.showMessageDialog(null, "Connected to Database", "Database Connection Status",
-                    JOptionPane.INFORMATION_MESSAGE);
+            return;
         }
     }
     public static Connection  getConnection() {

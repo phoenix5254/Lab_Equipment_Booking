@@ -1,23 +1,29 @@
 package model.resource;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
+
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.swing.JOptionPane;
+
+
+
+
 
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.Session;
 
-import model.users.Driver;
+import model.users.Enums.EquipStatus;
 
-public class ResourcesManager extends Equipment implements Seats {
+public class ResourcesManager extends Equipment  {
     private Lab lab;
 
     public static SessionFactory factory = null;
-
+    
+ 
     public ResourcesManager() {
         super();
         lab = new Lab();
@@ -36,7 +42,7 @@ public class ResourcesManager extends Equipment implements Seats {
         }
     }
 
-    public void createEquipment(Equipment equipment) {
+    public void createEquipment(Equipment equipment) {// create equipment seprately
         Session session = factory.openSession();
         session.beginTransaction();
         session.persist(equipment);
@@ -63,55 +69,50 @@ public class ResourcesManager extends Equipment implements Seats {
                     "Equipment Status", JOptionPane.ERROR_MESSAGE);
         }
     }
-    public void readEquipment(String equipId) {
+    public Equipment readEquipment(String equipId) {
         try (Session session = factory.openSession()) {
             session.beginTransaction();
             Equipment equip = session.get(Equipment.class, equipId);
-            session.getTransaction().commit();
+            return equip;
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, "Something went wrong reading the equipment: " + e.getMessage(),
                     "Equipment Status", JOptionPane.ERROR_MESSAGE);
         }
+        return null;
     }
     public Lab getLab() {
         return lab;
     }
 
     // when a lab is created the seats are created and added into the lab
-    public void createLab(Lab lab) throws SQLException {
+    public void createLabOnly(Lab lab) throws SQLException {
         try (Session session = factory.openSession()) {
             session.beginTransaction();
-            session.persist(lab);
-            addSeats(lab);// create database entries for seats in the lab
+            session.persist(lab); // create database entry for the lab
+            lab.addSeats(lab);// create database entries for seats in the lab
             session.getTransaction().commit();
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, "Something went wrong creating the lab: " + e.getMessage(),
                     "Lab Status", JOptionPane.ERROR_MESSAGE);
         }
     }
-
-    @Override
-    public void addSeats(Lab lab) {
-        Connection myConn = Driver.getConnection();
-        {
-            for (int seatNum = 0; seatNum < lab.getSeatCapacity(); seatNum++) {
-                SeatRecord newSeat = new SeatRecord(lab, seatNum);
-                String sql = "INSERT INTO seatsRecords (seatID, status, lab) VALUES (?, ?, ?)";
-                try (PreparedStatement pstmt = myConn.prepareStatement(sql)) {
-                    pstmt.setString(1, newSeat.getSeatID());
-                    pstmt.setString(2, newSeat.getStatus());
-                    pstmt.setString(3, newSeat.getLabName().getLabId());
-                    pstmt.executeUpdate();
-                } catch (SQLException e) {
-                    JOptionPane.showMessageDialog(null, "Insertion failed: " + e.getMessage(), "Insert Status",
-                            JOptionPane.ERROR_MESSAGE);
-                    throw new RuntimeException("Failed to add seat", e);
-                }
+    public void createLabWithEquipment(Lab lab, List<Equipment> equipList) {//add equipment to lab immediately when creating the lab
+        try (Session session = factory.openSession()) {
+            session.beginTransaction();
+            for(Equipment equip: equipList) {
+                lab.getEquipmentList().add(equip);
             }
+            lab.addSeats(lab);       
+            session.merge(lab);
+            session.getTransaction().commit();
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "Something went wrong adding equipment to the lab: " + e.getMessage(),
+                    "Lab Status", JOptionPane.ERROR_MESSAGE);
         }
     }
+  
     public void updateLab(Lab lab) {
-            try (Session session = factory.openSession()) {
+        try (Session session = factory.openSession()) {
                 session.beginTransaction();
                 session.merge(lab);
                 session.getTransaction().commit();
@@ -130,12 +131,11 @@ public class ResourcesManager extends Equipment implements Seats {
                     "Lab Status", JOptionPane.ERROR_MESSAGE);
         }
     }
-    public void readLab(String labId) {
+    public Lab readLab(String labId) {
         try (Session session = factory.openSession()) {
             Lab lab = session.get(Lab.class, labId);
             if (lab != null) {
-                JOptionPane.showMessageDialog(null, "Lab found with ID: " + labId, "Lab Status",
-                        JOptionPane.INFORMATION_MESSAGE);
+                return lab;
             } else {
                 JOptionPane.showMessageDialog(null, "Lab not found with ID: " + labId, "Lab Status",
                         JOptionPane.INFORMATION_MESSAGE);
@@ -144,6 +144,7 @@ public class ResourcesManager extends Equipment implements Seats {
             JOptionPane.showMessageDialog(null, "Something went wrong reading the lab: " + e.getMessage(),
                     "Lab Status", JOptionPane.ERROR_MESSAGE);
         }
+        return null;
     }
 
  public static void truncateDatabase() {
@@ -156,8 +157,8 @@ public class ResourcesManager extends Equipment implements Seats {
             session.createNativeQuery("SET FOREIGN_KEY_CHECKS = 0").executeUpdate();
             session.createNativeQuery("TRUNCATE TABLE seatsRecords").executeUpdate();
             session.createNativeQuery("TRUNCATE TABLE labs").executeUpdate();
+            session.createNativeQuery("TRUNCATE TABLE equipment").executeUpdate();
             session.createNativeQuery("SET FOREIGN_KEY_CHECKS = 1").executeUpdate();
-            
             tx.commit();
         } catch (Exception e) {
             if (tx != null) tx.rollback();
@@ -172,17 +173,37 @@ public class ResourcesManager extends Equipment implements Seats {
     JOptionPane.showMessageDialog(null, "Database truncated successfully", "Database Status", JOptionPane.INFORMATION_MESSAGE);
 }
 
-    
+    //update seat status
 
     
     public static void main(String[] args) throws SQLException {
         ResourcesManager rm = new ResourcesManager();
-        truncateDatabase();
+        /*truncateDatabase();
         Lab lab1 = new Lab("L01", "Ch", "Bu", 10);
-        Equipment equip1 = new Equipment("E01", "Mie", lab1, 10, 10);
-        
-        rm.createLab(lab1);
+        Equipment equip1 = new Equipment("E01", "Mie", lab1, EquipStatus.AVAILABLE, 10, 10);
+        rm.createLabOnly(lab1);
         rm.createEquipment(equip1);
+
+        lab1= new Lab("m2","uy","bu",15);
+        List<Equipment> equipList = new ArrayList<Equipment>();
+        Equipment equip2 = new Equipment("E02", "Mie", lab1, EquipStatus.AVAILABLE, 15, 15);
+        equipList.add(equip2);
+        Equipment equip3 = new Equipment("E03", "Mie", lab1, EquipStatus.AVAILABLE, 15, 15);
+        equipList.add(equip3);
+        Equipment equip4 = new Equipment("E04", "Mie", lab1, EquipStatus.AVAILABLE, 15, 15);
+        equipList.add(equip4);
+        rm.createLabWithEquipment(lab1, equipList);*/
+
+       /* */ rm.deleteLab(rm.readLab("L01"));
+        rm.deleteEquipment(rm.readEquipment("E02"));
+        Lab lab1=rm.readLab("m2");
+
+        Equipment equip3 = new Equipment("E03", "Mie", lab1, EquipStatus.AVAILABLE, 15, 15);
+        rm.updateEquipment(equip3);
+        lab1.setLabName("tye");
+        rm.updateLab(lab1);
+        
+     
         
 
     }
