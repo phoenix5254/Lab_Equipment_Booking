@@ -32,7 +32,7 @@ public class Equipment implements Serializable {
         this.equipName = "";
         this.lab = new Lab();
         this.status = EquipStatus.UNKNOWN.toString();
-        this.qtyOnHand = null;
+        this.qtyOnHand = null;    
         this.qtyAvailable = null;
     }
     public Equipment(String equipId, String equipName, Lab lab, EquipStatus status, int qtyOnHand, int qtyAvailable) {

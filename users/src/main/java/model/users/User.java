@@ -132,7 +132,7 @@ public class User implements Serializable {
     }
 
     public void setPassword(String password) {
-        this.password = password;
+        resetPassword(password);
     }
 
     public void setSalt(byte[] salt) {
