@@ -64,6 +64,7 @@ public class ResourcesManager extends Equipment  {
             session.beginTransaction();
             session.remove(equip);
             session.getTransaction().commit();
+            logger.warn("Equipment deleted with ID: " + equip.getEquipId());
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, "Something went wrong deleting the equipment: " + e.getMessage(),
                     "Equipment Status", JOptionPane.ERROR_MESSAGE);
@@ -109,6 +110,7 @@ public class ResourcesManager extends Equipment  {
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, "Something went wrong adding equipment to the lab: " + e.getMessage(),
                     "Lab Status", JOptionPane.ERROR_MESSAGE);
+                    logger.error("Something went wrong adding with equipment and or lab "+e.getMessage());
         }
     }
   
@@ -120,6 +122,7 @@ public class ResourcesManager extends Equipment  {
             } catch (Exception e) {
                 JOptionPane.showMessageDialog(null, "Something went wrong updating the lab: " + e.getMessage(),
                         "Lab Status", JOptionPane.ERROR_MESSAGE);
+                        logger.error("Something went wrong updating the lab "+e.getMessage());
             }
     }
     public void deleteLab(Lab lab) {
@@ -130,12 +133,15 @@ public class ResourcesManager extends Equipment  {
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, "Something went wrong deleting the lab: " + e.getMessage(),
                     "Lab Status", JOptionPane.ERROR_MESSAGE);
+                    logger.error("Something went wrong deleting the lab "+e.getMessage());
         }
     }
     public Lab readLab(String labId) {
         try (Session session = factory.openSession()) {
+            session.beginTransaction();
             Lab lab = session.get(Lab.class, labId);
             if (lab != null) {
+                
                 return lab;
             } else {
                 JOptionPane.showMessageDialog(null, "Lab not found with ID: " + labId, "Lab Status",
