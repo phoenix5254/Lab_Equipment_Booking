@@ -25,7 +25,7 @@ public class Reservation implements Serializable {
     private LocalTime startTime;
     private LocalTime endTime;
     private String status;
-
+//
     @ManyToOne
     @JoinColumn(name = "labId")
     private Lab lab;

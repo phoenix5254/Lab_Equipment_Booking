@@ -40,7 +40,7 @@ public class UserOps {
 	                     JOptionPane.ERROR_MESSAGE);
 	        }
 
-	        return affectedRows;
+	        return affectedRows;//
 	    }
 	    
 	    public int updateUser(User user) {

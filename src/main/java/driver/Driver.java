@@ -41,7 +41,7 @@ public class Driver {
 		
 		Reservation rm = new Reservation();
 		ReservationOps rmOps = new ReservationOps();
-		rmOps.viewReservation(1);
+		rmOps.viewReservation(1);//
 		
 		//3. Execute SQL Query
 		

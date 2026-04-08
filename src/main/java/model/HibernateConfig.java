@@ -11,6 +11,6 @@ public class HibernateConfig {
                     .buildSessionFactory();
 
     public static SessionFactory getSessionFactory() {
-        return sessionFactory;
+        return sessionFactory;//
     }
 }

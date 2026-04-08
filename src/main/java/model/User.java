@@ -85,7 +85,7 @@ public class User implements Serializable {
     } catch (NoSuchAlgorithmException e) {
         throw new RuntimeException("Error verifying password", e);
     }
-}
+}//
 
     public String getUserID() {
         return userID;

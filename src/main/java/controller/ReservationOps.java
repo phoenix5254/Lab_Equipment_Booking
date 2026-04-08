@@ -89,7 +89,7 @@ public class ReservationOps {
     public Reservation viewReservation(int reservationNum) {
         try (Session session = sessionFactory.openSession()) {
             session.beginTransaction();
-            Reservation rs = session.get(Reservation.class, reservationNum);
+            Reservation rs = session.get(Reservation.class, reservationNum);//
             if (rs != null) {
                 
                 return rs;

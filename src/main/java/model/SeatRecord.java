@@ -10,7 +10,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import model.EquipStatus;
-
+//
 @Entity
 @Table(name = "SeatsRecords")
 public class SeatRecord implements Serializable {

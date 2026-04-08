@@ -19,7 +19,7 @@ public class Equipment implements Serializable {
     @Id
     @Column(name="equipId")
     private String equipId;
-    private String equipName;
+    private String equipName;//
     @ManyToOne
     @JoinColumn(name="labId")
     private Lab lab;
