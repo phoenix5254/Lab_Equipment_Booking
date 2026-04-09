@@ -17,6 +17,7 @@ public class SeatRecord implements Serializable {
     @Id
     @Column(name = "seatID")
     private String seatID;
+    @ManyToOne
     @JoinColumn(name = "reservationNum")
     private Reservation reservation;
     @ManyToOne
@@ -45,6 +46,10 @@ public class SeatRecord implements Serializable {
 
     public Lab getLabName() {
         return lab;
+    }
+    
+    public void setReservation(Reservation reservation) {
+    	this.reservation = reservation;
     }
 
     public void setLab(Lab lab) {

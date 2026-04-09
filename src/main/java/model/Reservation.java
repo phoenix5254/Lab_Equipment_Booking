@@ -4,6 +4,7 @@ import java.io.Serializable;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import jakarta.persistence.*;
@@ -56,20 +57,13 @@ public class Reservation implements Serializable {
 	}
     
     public Reservation() {
-		reservationNum = 0;
-		userId = userId;
-		reservationDate = reservationDate;
-		startTime = startTime;
-		endTime = endTime;
-		status = status;
-		lab = lab;
-		seats = seats;
-		equipmentList = equipmentList;
-	}
+        this.seats = new ArrayList<>();
+        this.equipmentList = new ArrayList<>();
+    }
 
 	
 
-    public int getReservationNum() {
+    public long getReservationNum() {
         return reservationNum;
     }
 

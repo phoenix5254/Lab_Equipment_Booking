@@ -1,13 +1,14 @@
 package controller;
 
-import javax.swing.JOptionPane;
+import java.time.*;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.hibernate.*;
 import org.hibernate.cfg.Configuration;
 
-import jakarta.persistence.JoinColumn;
 import model.Reservation;
-import model.HibernateConfig;
+import model.SeatRecord;
 import model.Lab;
 
 public class ReservationOps {
@@ -26,82 +27,146 @@ public class ReservationOps {
 			throw new ExceptionInInitializerError(e);
 		}
 	}
+	public void createReservation(String userId,String labId,List<String> seatIds,LocalDate date,LocalTime start,LocalTime end,String status) {
 
-    // ADD
-    public void addReservation(Reservation reservation) {
+	    Session session = sessionFactory.openSession();
+	    Transaction transaction = null;
 
-        Transaction transaction = null;
+	    try {
+	        transaction = session.beginTransaction();
 
-        try (Session session = sessionFactory.openSession()) {
+	        Lab lab = session.get(Lab.class, labId);
 
-            transaction = session.beginTransaction();
-            session.persist(reservation);
-            transaction.commit();
+	        Reservation reservation = new Reservation();
+	        reservation.setUserId(userId);
+	        reservation.setReservationDate(date);
+	        reservation.setStartTime(start);
+	        reservation.setEndTime(end);
+	        reservation.setStatus(status);
+	        reservation.setLab(lab);
 
-        } catch (Exception e) {
-            if (transaction != null) transaction.rollback();
-            e.printStackTrace();
-        }
-    }
+	        List<SeatRecord> seats = new ArrayList<>();
 
-    // UPDATE
-    public void updateReservation(Reservation reservation) {
+	        for (String seatId : seatIds) {
 
-        Transaction transaction = null;
+	            SeatRecord seat = session.get(SeatRecord.class, seatId);
 
-        try (Session session = sessionFactory.openSession()) {
+	           
+	            seat.setReservation(reservation);   
+	            seats.add(seat);
+	        }
 
-            transaction = session.beginTransaction();
+	        reservation.setSeats(seats); 
+
+	        session.persist(reservation);
+
+	        transaction.commit();
+
+	        System.out.println("Reservation created successfully!");
+
+	    } catch (Exception e) {
+	        if (transaction != null) transaction.rollback();
+	        e.printStackTrace();
+	    } finally {
+	        session.close();
+	    }
+	}
+	
+
+    //DELETE WORKS
+	public void deleteReservation(int reservationId) {
+
+	    Session session = sessionFactory.openSession();
+	    Transaction transaction = null;
+
+	    try {
+	    	transaction = session.beginTransaction();
+
+	        Reservation reservation =
+	                session.get(Reservation.class, reservationId);
+
+	        if (reservation != null) {
+	            session.remove(reservation);
+	        }
+
+	        transaction.commit();
+	        System.out.println("Reservation deleted!");
+
+	    } catch (Exception e) {
+	        if (transaction != null) transaction.rollback();
+	        e.printStackTrace();
+	    } finally {
+	        session.close();
+	    }
+	}
+	
+	
+	//update reservation works
+	public void updateReservation(int reservationId, LocalDate reservationDate, LocalTime newStart,LocalTime newEnd,String newStatus) {
+
+    Session session = sessionFactory.openSession();
+    Transaction transaction = null;
+
+    try {
+        transaction = session.beginTransaction();
+
+        Reservation reservation =
+                session.get(Reservation.class, reservationId);
+
+        if (reservation != null) {
+        	reservation.setReservationDate(LocalDate.now());
+            reservation.setStartTime(newStart);
+            reservation.setEndTime(newEnd);
+            reservation.setStatus(newStatus);
+
             session.merge(reservation);
-            transaction.commit();
-
-        } catch (Exception e) {
-            if (transaction != null) transaction.rollback();
-            e.printStackTrace();
         }
+
+        transaction.commit();
+        System.out.println("Reservation updated!");
+
+    } catch (Exception e) {
+        if (transaction != null) transaction.rollback();
+        e.printStackTrace();
+    } finally {
+        session.close();
     }
+}
+    
+    
+    public void viewReservation(int reservationId) {
 
-    // DELETE
-    public void deleteReservation(String reservationId) {
+        Session session = sessionFactory.openSession();
 
-        Transaction transaction = null;
+        try {
 
-        try (Session session = sessionFactory.openSession()) {
-
-            transaction = session.beginTransaction();
-
-            Reservation reservation =
-                    session.get(Reservation.class, reservationId);
+            Reservation reservation = session.get(Reservation.class, reservationId);
 
             if (reservation != null) {
-                session.remove(reservation);
-            }
+                System.out.println("Reservation ID: " +
+                        reservation.getReservationNum());
 
-            transaction.commit();
+                System.out.println("User: " +
+                        reservation.getUserId());
 
-        } catch (Exception e) {
-            if (transaction != null) transaction.rollback();
-            e.printStackTrace();
-        }
-    }
-    
-    //view reservation return object of search
-    public Reservation viewReservation(int reservationNum) {
-        try (Session session = sessionFactory.openSession()) {
-            session.beginTransaction();
-            Reservation rs = session.get(Reservation.class, reservationNum);//
-            if (rs != null) {
-                
-                return rs;
+                System.out.println("Lab: " +
+                        reservation.getLab().getLabId());
+
+                System.out.println("Seats:");
+
+                for (SeatRecord seat : reservation.getSeats()) {
+                    System.out.println(" - " + seat.getSeatID());
+                }
+
             } else {
-                JOptionPane.showMessageDialog(null, "Lab not found with ID: " + reservationNum, "Lab Status",
-                        JOptionPane.INFORMATION_MESSAGE);
+                System.out.println("Reservation not found.");
             }
+
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(null, "Something went wrong reading the lab: " + e.getMessage(),
-                    "Lab Status", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        } finally {
+            session.close();
         }
-        return null;
     }
    
 }

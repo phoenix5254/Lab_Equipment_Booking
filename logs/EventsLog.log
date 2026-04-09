@@ -1,2 +1,7 @@
 23:09:30.945 [main] INFO  model.ResourcesManager - Lab created with equipment successfully: m2
 23:16:32.592 [main] INFO  model.ResourcesManager - Lab created with equipment successfully: m2
+22:22:38.712 [main] INFO  model.ResourcesManager - Lab created with equipment successfully: m2
+22:26:43.402 [main] INFO  model.ResourcesManager - Lab created with equipment successfully: m2
+22:37:29.708 [main] INFO  model.ResourcesManager - Lab created with equipment successfully: m2
+23:21:52.849 [main] INFO  model.ResourcesManager - Lab created with equipment successfully: m2
+00:30:44.315 [main] ERROR model.ResourcesManager - Something went wrong adding with equipment and or lab JDBC exception executing SQL [Unknown column 'sd1_0.reservation' in 'field list'] [select e1_0.equipId,e1_0.equipName,l1_0.labId,l1_0.labName,l1_0.location,l1_0.seatCapacity,sd1_0.lab,sd1_0.seatID,sd1_0.reservation,sd1_0.status,e1_0.qtyAvailable,e1_0.qtyOnHand,e1_0.status from equipment e1_0 left join labs l1_0 on l1_0.labId=e1_0.labId left join SeatsRecords sd1_0 on l1_0.labId=sd1_0.lab where e1_0.equipId=?]
