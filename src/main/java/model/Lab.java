@@ -16,8 +16,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import model.EquipStatus;
-import driver.Driver;
+
 
 @Entity
 @Table(name = "labs")

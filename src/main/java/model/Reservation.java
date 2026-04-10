@@ -9,20 +9,17 @@ import java.util.List;
 
 import jakarta.persistence.*;
 
-import model.Lab;
-import model.SeatRecord;
-import model.Equipment;
 
 @Entity
 @Table(name = "reservations")
+@IdClass(ReservationId.class)
 public class Reservation implements Serializable {
 	private static final long serialVersionUID = 1L;
 	@Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-	
     private int reservationNum;
     private String userId;
     private LocalDate reservationDate;
+    @Id
     private LocalTime startTime;
     private LocalTime endTime;
     private String status;
@@ -31,8 +28,8 @@ public class Reservation implements Serializable {
     @JoinColumn(name = "labId")
     private Lab lab;
     
-    @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL)
-    private List<SeatRecord> seats;
+    @OneToOne
+    private SeatRecord seat;
 
     @ManyToMany
     @JoinTable(
@@ -44,7 +41,7 @@ public class Reservation implements Serializable {
 
     
     public Reservation(int reservationNum, String userId, LocalDate reservationDate, LocalTime startTime,
-			LocalTime endTime, String status, Lab lab, List<SeatRecord> seats, List<Equipment> equipmentList) {
+			LocalTime endTime, String status, Lab lab, SeatRecord seat, List<Equipment> equipmentList) {
 		this.reservationNum = reservationNum;
 		this.userId = userId;
 		this.reservationDate = reservationDate;
@@ -52,12 +49,12 @@ public class Reservation implements Serializable {
 		this.endTime = endTime;
 		this.status = status;
 		this.lab = lab;
-		this.seats = seats;
+		this.seat = seat;
 		this.equipmentList = equipmentList;
 	}
     
     public Reservation() {
-        this.seats = new ArrayList<>();
+        this.seat = new SeatRecord();
         this.equipmentList = new ArrayList<>();
     }
 
@@ -107,12 +104,12 @@ public class Reservation implements Serializable {
         this.lab = lab;
     }
 
-    public List<SeatRecord> getSeats() {
-        return seats;
+    public SeatRecord getSeat() {
+        return seat;
     }
 
-    public void setSeats(List<SeatRecord> seats) {
-        this.seats = seats;
+    public void setSeat(SeatRecord seat) {
+        this.seat = seat;
     }
 
     public List<Equipment> getEquipmentList() {
@@ -135,7 +132,7 @@ public class Reservation implements Serializable {
 	public String toString() {
 		return "Reservation [reservationNum=" + reservationNum + ", userId=" + userId + ", reservationDate="
 				+ reservationDate + ", startTime=" + startTime + ", endTime=" + endTime + ", status=" + status
-				+ ", lab=" + lab + ", seats=" + seats + ", equipmentList=" + equipmentList + "]";
+				+ ", lab=" + lab + ", seat=" + seat + ", equipmentList=" + equipmentList + "]";
 	}
     
 }

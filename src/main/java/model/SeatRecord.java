@@ -6,11 +6,12 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinColumns;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
-import model.EquipStatus;
-//
+
+
 @Entity
 @Table(name = "SeatsRecords")
 public class SeatRecord implements Serializable {
@@ -18,7 +19,10 @@ public class SeatRecord implements Serializable {
     @Column(name = "seatID")
     private String seatID;
     @ManyToOne
-    @JoinColumn(name = "reservationNum")
+    @JoinColumns({
+        @JoinColumn(name = "reservationNum"),
+        @JoinColumn(name = "startTime")
+    })
     private Reservation reservation;
     @ManyToOne
     @JoinColumn(name = "lab") // This tells Hibernate to use your actual column name

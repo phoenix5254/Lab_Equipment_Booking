@@ -3,7 +3,6 @@ package model;
 import java.security.SecureRandom;
 import java.util.Base64;
 
-import model.Roles;
 
 import java.io.Serializable;
 import java.security.MessageDigest;
@@ -132,7 +131,7 @@ public class User implements Serializable {
     }
 
     public void setPassword(String password) {
-        this.password = password;
+       resetPassword(password);
     }
 
     public void setSalt(byte[] salt) {

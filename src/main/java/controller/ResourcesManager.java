@@ -1,13 +1,17 @@
-package model;
+package controller;
 
 
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
 import javax.swing.JOptionPane;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
 import org.hibernate.cfg.Configuration;
+
+import model.EquipStatus;
+import model.Equipment;
+import model.Lab;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hibernate.Session;
@@ -151,61 +155,43 @@ public class ResourcesManager extends Equipment  {
         return null;
     }
 
- public static void truncateDatabase() {
-    // Use the existing session from the try-with-resources
-    try (Session session = factory.openSession()) {
-        Transaction tx = session.beginTransaction();
-        
-        try {
-            // Execute all queries within the SAME session and transaction
-            session.createNativeQuery("SET FOREIGN_KEY_CHECKS = 0").executeUpdate();
-            session.createNativeQuery("TRUNCATE TABLE seatsRecords").executeUpdate();
-            session.createNativeQuery("TRUNCATE TABLE labs").executeUpdate();
-            session.createNativeQuery("TRUNCATE TABLE equipment").executeUpdate();
-            session.createNativeQuery("SET FOREIGN_KEY_CHECKS = 1").executeUpdate();
+    public static void initializeResourceData() {
+        try (Session session = factory.openSession()) {
+            Transaction tx = session.beginTransaction();
+            
+            // Create 10 labs
+            String[] labNames = {"Chemistry Lab", "Physics Lab", "Biology Lab", "Computer Lab", "Engineering Lab", 
+                                "Math Lab", "History Lab", "Art Lab", "Music Lab", "Sports Lab"};
+            String[] locations = {"Building A", "Building B", "Building C", "Building D", "Building E",
+                                 "Building F", "Building G", "Building H", "Building I", "Building J"};
+            int[] capacities = {20, 25, 15, 30, 18, 12, 10, 22, 14, 28};
+            
+            for (int i = 0; i < 10; i++) {
+                String labId = String.format("L%02d", i + 1);
+                Lab lab = new Lab(labId, labNames[i], locations[i], capacities[i]);
+                session.persist(lab);
+                
+                // Create different types of equipment for each lab
+                String[] equipTypes = {"Microscope", "Computer", "Beaker", "Oscilloscope", "Petri Dish", 
+                                      "Projector", "Calculator", "Paint Brush", "Piano", "Treadmill"};
+                for (int j = 0; j < 5; j++) { // 5 equipment per lab
+                    String equipId = String.format("E%02d%02d", i + 1, j + 1);
+                    Equipment equip = new Equipment(equipId, equipTypes[j], lab, EquipStatus.AVAILABLE, 10, 10);
+                    session.persist(equip);
+                }
+            }
+            
             tx.commit();
+            JOptionPane.showMessageDialog(null, "Database initialized with 10 labs and equipment", "Initialization Status", JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception e) {
-            if (tx != null) tx.rollback();
-            throw e; // Rethrow to be caught by the outer catch block
+            JOptionPane.showMessageDialog(null, "Error initializing data: " + e.getMessage(), "Initialization Status", JOptionPane.ERROR_MESSAGE);
         }
-    } catch (Exception e) {
-        e.printStackTrace();
-        JOptionPane.showMessageDialog(null, 
-            "Something went wrong truncating the database: " + e.getMessage(),
-            "Database Status", JOptionPane.ERROR_MESSAGE);
     }
-    JOptionPane.showMessageDialog(null, "Database truncated successfully", "Database Status", JOptionPane.INFORMATION_MESSAGE);
-}
 
     
     public static void main(String[] args) throws SQLException {
         ResourcesManager rm = new ResourcesManager();
-        truncateDatabase();
-        Lab lab1 = new Lab("L01", "Ch", "Bu", 10);
-        Equipment equip1 = new Equipment("E01", "Mie", lab1, EquipStatus.AVAILABLE, 10, 10);
-        rm.createLabOnly(lab1);
-        rm.createEquipment(equip1);
-
-        lab1= new Lab("m2","uy","bu",15);
-        List<Equipment> equipList = new ArrayList<Equipment>();
-        Equipment equip2 = new Equipment("E02", "Mie", lab1, EquipStatus.AVAILABLE, 15, 15);
-        equipList.add(equip2);
-        Equipment equip3 = new Equipment("E03", "Mie", lab1, EquipStatus.AVAILABLE, 15, 15);
-        equipList.add(equip3);
-        Equipment equip4 = new Equipment("E04", "Mie", lab1, EquipStatus.AVAILABLE, 15, 15);
-        equipList.add(equip4);
-        rm.createLabWithEquipment(lab1, equipList);
-
-       /*  rm.deleteLab(rm.readLab("L01"));
-        rm.deleteEquipment(rm.readEquipment("E02"));
-        Lab lab1=rm.readLab("m2");
-
-        Equipment equip3 = new Equipment("E03", "Mie", lab1, EquipStatus.AVAILABLE, 15, 15);
-        rm.updateEquipment(equip3);
-        lab1.setLabName("tye");
-        rm.updateLab(lab1);*/
-        
-     //
+        initializeResourceData();
         
 
     }

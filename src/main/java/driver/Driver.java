@@ -13,6 +13,9 @@ import model.Lab;
 import model.Reservation;
 import model.Roles;
 import model.SeatRecord;
+import model.Equipment;
+import model.EquipStatus;
+import controller.ResourcesManager;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -39,6 +42,10 @@ public class Driver {
 //		User user = new User("U02", "higher ", "dunbarton", "jdoe@my.com", "password123", Roles.ADMIN);
 //		UserOps userOps = new UserOps();
 //		int rows = userOps.createUserRecord(user);
+		
+		// Initialize database with 10 labs and equipment
+		ResourcesManager.initializeData();
+		
 		ReservationOps rmOps = new ReservationOps();
 
 		List<String> seatIds = Arrays.asList("A0");

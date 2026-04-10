@@ -1,14 +1,14 @@
 package controller;
 
 import java.time.*;
-import java.util.ArrayList;
-import java.util.List;
+import javax.swing.JOptionPane;
 
 import org.hibernate.*;
 import org.hibernate.cfg.Configuration;
 
 import model.Reservation;
 import model.SeatRecord;
+import model.EquipStatus;
 import model.Lab;
 
 public class ReservationOps {
@@ -27,7 +27,7 @@ public class ReservationOps {
 			throw new ExceptionInInitializerError(e);
 		}
 	}
-	public void createReservation(String userId,String labId,List<String> seatIds,LocalDate date,LocalTime start,LocalTime end,String status) {
+	public void createReservation(String userId,String labId,String seatId,LocalDate date,LocalTime start,LocalTime end,String status) {
 
 	    Session session = sessionFactory.openSession();
 	    Transaction transaction = null;
@@ -45,28 +45,20 @@ public class ReservationOps {
 	        reservation.setStatus(status);
 	        reservation.setLab(lab);
 
-	        List<SeatRecord> seats = new ArrayList<>();
 
-	        for (String seatId : seatIds) {
-
-	            SeatRecord seat = session.get(SeatRecord.class, seatId);
-
-	           
-	            seat.setReservation(reservation);   
-	            seats.add(seat);
-	        }
-
-	        reservation.setSeats(seats); 
-
+	        SeatRecord seat = session.get(SeatRecord.class, seatId);
+			seat.setStatus(EquipStatus.BOOKED.toString());
+			reservation.setSeat(seat);
+			session.merge(seat);
 	        session.persist(reservation);
-
 	        transaction.commit();
 
-	        System.out.println("Reservation created successfully!");
+	        JOptionPane.showMessageDialog(null, "Reservation created successfully!");
 
 	    } catch (Exception e) {
 	        if (transaction != null) transaction.rollback();
 	        e.printStackTrace();
+			JOptionPane.showMessageDialog(null, "Failed to create reservation: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
 	    } finally {
 	        session.close();
 	    }
@@ -101,7 +93,7 @@ public class ReservationOps {
 	}
 	
 	
-	//update reservation works
+	//Admins Only
 	public void updateReservation(int reservationId, LocalDate reservationDate, LocalTime newStart,LocalTime newEnd,String newStatus) {
 
     Session session = sessionFactory.openSession();
@@ -141,25 +133,17 @@ public class ReservationOps {
         try {
 
             Reservation reservation = session.get(Reservation.class, reservationId);
-
             if (reservation != null) {
-                System.out.println("Reservation ID: " +
-                        reservation.getReservationNum());
-
-                System.out.println("User: " +
-                        reservation.getUserId());
-
-                System.out.println("Lab: " +
-                        reservation.getLab().getLabId());
-
-                System.out.println("Seats:");
-
-                for (SeatRecord seat : reservation.getSeats()) {
-                    System.out.println(" - " + seat.getSeatID());
-                }
-
+				JOptionPane.showMessageDialog(null, "Reservation Details:\n" +
+						"Reservation ID: " + reservation.getReservationNum() + "\n" +
+						"User: " + reservation.getUserId() + "\n" +
+						"Date: " + reservation.getReservationDate() + "\n" +
+						"Time: " + reservation.getStartTime() + " - " + reservation.getEndTime() + "\n" +
+						"Lab: " + reservation.getLab().getLabId() + "\n" +
+						"Seats: " + reservation.getSeat().getSeatID() + "\n" +
+						"Status: " + reservation.getStatus(), "Reservation Details", JOptionPane.INFORMATION_MESSAGE);
             } else {
-                System.out.println("Reservation not found.");
+				JOptionPane.showMessageDialog(null, "Reservation not found.", "Error", JOptionPane.ERROR_MESSAGE);
             }
 
         } catch (Exception e) {
