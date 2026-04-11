@@ -16,6 +16,8 @@
         <mapping class="model.resource.Lab"/> 
         <mapping class="model.resource.Equipment"/>
         <mapping class="model.resource.SeatRecord"/>
+        <mapping class="model.resource.Reservation"/>
+        
 
     </session-factory>
 </hibernate-configuration>

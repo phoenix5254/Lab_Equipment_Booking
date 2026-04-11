@@ -1,13 +1,9 @@
 package model.resource;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+
+import java.io.Serial;
 import java.util.ArrayList;
 import java.util.List;
-
-import javax.swing.JOptionPane;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -15,14 +11,12 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import model.Enums.EquipStatus;
-import model.users.Driver;
 
 @Entity
 @Table(name = "labs")
 public class Lab implements Seats {
 
-    // @Serial private static final long serialVersionUID = 1L;
+     @Serial private static final long serialVersionUID = 1L;
     @Id
     @Column(name = "labId")
     private String labId;
@@ -49,7 +43,7 @@ public class Lab implements Seats {
         this.labName = labName;
         this.location = location;
         this.seatCapacity = seatCapacity;
-
+        this.seatDisplay = addSeats(this);
     }
 
     public String getLabId() {
@@ -82,10 +76,11 @@ public class Lab implements Seats {
 
     public void setSeatCapacity(int seatCapacity) {
         this.seatCapacity = seatCapacity;
+        this.seatDisplay=addSeats(this);
     }
 
     public List<SeatRecord> getSeatDisplay() {
-        return  seatDisplay;
+        return seatDisplay;
     }
 
     public List<Equipment> getEquipmentList() {
@@ -102,76 +97,16 @@ public class Lab implements Seats {
     }
 
     @Override
-    public void addSeats(Lab lab) {
-        Connection myConn = Driver.getConnection();
-        {
-            for (int seatNum = 0; seatNum < lab.getSeatCapacity(); seatNum++) {
-                SeatRecord newSeat = new SeatRecord(lab, seatNum);
-                String sql = "INSERT INTO seatsRecords (seatID, status, lab) VALUES (?, ?, ?)";
-                try (PreparedStatement pstmt = myConn.prepareStatement(sql)) {
-                    pstmt.setString(1, newSeat.getSeatID());
-                    pstmt.setString(2, newSeat.getStatus());
-                    pstmt.setString(3, newSeat.getLabName().getLabId());
-                    pstmt.executeUpdate();
-                } catch (SQLException e) {
-                    JOptionPane.showMessageDialog(null, "Insertion failed: " + e.getMessage(), "Insert Status",
-                            JOptionPane.ERROR_MESSAGE);
-                }
-            }
+    public List<SeatRecord> addSeats(Lab lab) {
+        List<SeatRecord> listOfSeats = new ArrayList<>();
+
+        for (int seatNum = 0; seatNum < lab.getSeatCapacity(); seatNum++) {
+            SeatRecord newSeat = new SeatRecord(lab, seatNum);
+            listOfSeats.add(newSeat);
         }
+
         SeatRecord.alphaIndex++;
-    }
-
-    public void removeSeats(Lab lab) {
-        Connection myConn = Driver.getConnection();
-        String sql = "DELETE FROM seatsRecords WHERE lab = ?";
-        try (PreparedStatement pstmt = myConn.prepareStatement(sql)) {
-            pstmt.setString(1, lab.getLabId());
-            pstmt.executeUpdate();
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(null, "Deletion failed: " + e.getMessage(), "Delete Status",
-                    JOptionPane.ERROR_MESSAGE);
-            throw new RuntimeException("Failed to remove seats", e);
-        }
-    }
-
-    public void updateSeatStatus(String seatID, String newStatus) {
-        boolean status = checkSeatStatus(seatID);
-        if (!status) {
-            JOptionPane.showMessageDialog(null, "Seat is not available: " + seatID, "Seat Status",
-                    JOptionPane.ERROR_MESSAGE);
-            return;
-        } else {
-            Connection myConn = Driver.getConnection();
-            String sql = "UPDATE seatsRecords SET status = ? WHERE seatID = ?";
-            try (PreparedStatement pstmt = myConn.prepareStatement(sql)) {
-                pstmt.setString(1, newStatus);
-                pstmt.setString(2, seatID);
-                pstmt.executeUpdate();
-            } catch (SQLException e) {
-                JOptionPane.showMessageDialog(null, "Update failed: " + e.getMessage(), "Update Status",
-                        JOptionPane.ERROR_MESSAGE);
-            }
-        }
-    }
-
-    public Boolean checkSeatStatus(String seatID) {
-        Connection myConn = Driver.getConnection();
-        String sql = "SELECT status FROM seatsRecords WHERE seatID = ?";
-        try (PreparedStatement pstmt = myConn.prepareStatement(sql)) {
-            pstmt.setString(1, seatID);
-            ResultSet rs = pstmt.executeQuery();
-            if (rs.next()) {
-                String status = rs.getString("status");
-                return status.equals(EquipStatus.AVAILABLE.toString());
-            } else {
-                return false;
-            }
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(null, "Query failed: " + e.getMessage(), "Query Status",
-                    JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
+        return listOfSeats;
     }
 
 }

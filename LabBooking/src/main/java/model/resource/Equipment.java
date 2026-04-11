@@ -1,6 +1,7 @@
 package model.resource;
 
 import java.io.Serial;
+
 import java.io.Serializable;
 
 import jakarta.persistence.Column;
@@ -10,6 +11,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import model.Enums.EquipStatus;
+
 @Entity
 @Table(name="equipment")
 
@@ -19,7 +21,7 @@ public class Equipment implements Serializable {
     @Id
     @Column(name="equipId")
     private String equipId;
-    private String equipName;
+    private String equipName;//
     @ManyToOne
     @JoinColumn(name="labId")
     private Lab lab;
@@ -32,8 +34,8 @@ public class Equipment implements Serializable {
         this.equipName = "";
         this.lab = new Lab();
         this.status = EquipStatus.UNKNOWN.toString();
-        this.qtyOnHand = null;    
-        this.qtyAvailable = null;
+        this.qtyOnHand = 0;    
+        this.qtyAvailable = 0;
     }
     public Equipment(String equipId, String equipName, Lab lab, EquipStatus status, int qtyOnHand, int qtyAvailable) {
         this.equipId = equipId;
@@ -52,6 +54,7 @@ public class Equipment implements Serializable {
         this.qtyOnHand = qtyOnHand;
         this.qtyAvailable = qtyAvailable;
     }
+    
 
     public String getEquipName(){ return equipName; }
     public void setEquipName(String equipName){ this.equipName = equipName; }
