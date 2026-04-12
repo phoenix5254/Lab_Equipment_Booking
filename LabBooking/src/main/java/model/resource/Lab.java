@@ -109,5 +109,6 @@ private List<SeatRecord> seatDisplay;// all records are adjusted with the lab th
         SeatRecord.alphaIndex++;
         return listOfSeats;
     }
+    
 
 }
