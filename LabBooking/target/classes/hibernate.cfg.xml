@@ -18,6 +18,7 @@
         <mapping class="model.resource.SeatRecord"/>
         <mapping class="model.resource.Reservation"/>
         
+        
 
     </session-factory>
 </hibernate-configuration>

@@ -1,250 +1,305 @@
 package controller;
 
-import java.time.*;
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Time;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+
 import javax.swing.JOptionPane;
 
-import org.hibernate.*;
-import org.hibernate.cfg.Configuration;
-
-import model.Enums.EquipStatus;
-import model.resource.*;
+import model.resource.Equipment;
+import model.resource.EquipmentReserved;
+import model.resource.Lab;
+import model.resource.Reservation;
+import model.resource.SeatRecord;
+import model.users.User;
 
 public class ReservationManager {
-    private static SessionFactory sessionFactory = null;
+    private static Connection myConn;
+    private static int reservationNum;
+    private Reservation rs;
+    private EquipmentReserved er;
+    
+    // Integrated ResourcesManager for Hibernate operations
+    private ResourcesManager rm;
 
     public ReservationManager() {
-        sessionFactory = buildSessionFactory();
+        UserManager um = new UserManager();
+        myConn = UserManager.getConnection();
+        
+        // Initialize the Hibernate-based resource manager
+        rm = new ResourcesManager();
+        
+        reservationNum = getnextReservationNum();
+        rs = new Reservation();
     }
 
-    public static SessionFactory buildSessionFactory() {
-        try {
-            return new Configuration().configure().buildSessionFactory();
-
-        } catch (Exception e) {
-            System.err.println("Session Creation Failed" + e);
-            throw new ExceptionInInitializerError(e);
+    public ReservationManager(String userId, LocalDate reservationDate, LocalTime startTime,
+            LocalTime endTime, String status, String labId, String seatId, List<Equipment> equipmentList,
+            int equipQty) {
+        rm = new ResourcesManager();
+        rs = new Reservation(userId, reservationDate, startTime, endTime, status, labId, seatId, equipmentList,
+                equipQty, reservationNum);
+        
+        // Safety check for empty list before accessing index
+        if (!equipmentList.isEmpty()) {
+            er = new EquipmentReserved(rs.getReservationNum(), equipmentList.get(0).getEquipId(), equipQty);
         }
     }
 
-    private Reservation findReservationByNumber(int reservationNum) {
-        Session session = sessionFactory.openSession();
-        Transaction tx = null;
-        Reservation reservation = null;
-        try {
-            tx = session.beginTransaction();
-            reservation = session.get(Reservation.class, reservationNum);
-            tx.commit();
-        } catch (Exception e) {
-            if (tx != null)
-                tx.rollback();
+    public ReservationManager(Reservation rs) {
+        this.rm = new ResourcesManager();
+        this.rs = rs;
+    }
+
+    // --- Database Logic ---
+
+    static int getnextReservationNum() {
+        String sql = "SELECT MAX(reservationNum) FROM reservation";
+        try (PreparedStatement stmt = myConn.prepareStatement(sql)) {
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1) + 1;
+            }
+        } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            session.close();
+        }
+        return 1;
+    }
+
+    /**
+     * Creates a reservation for equipment.
+     * Uses Hibernate (rm) to update the Equipment entity's state.
+     */
+    public int createReserveEquip(int reservationNum, String equipmentID, int equipmentQty) {
+        String sql = "INSERT INTO reservationequip(reservationNum, equipId, equipmentQty) VALUES (?, ?, ?)";
+        int affectedRows = 0;
+
+        // Use ResourcesManager (Hibernate) to get current equipment state
+        Equipment equipment = rm.readEquipment(equipmentID);
+
+        if (equipment != null && equipment.getQtyAvailable() >= equipmentQty) {
+            try (PreparedStatement stmt = myConn.prepareStatement(sql)) {
+                stmt.setInt(1, reservationNum);
+                stmt.setString(2, equipmentID);
+                stmt.setInt(3, equipmentQty);
+
+                // Update the quantity using Hibernate through ResourcesManager
+                int newQty = equipment.getQtyAvailable() - equipmentQty;
+                equipment.setQtyAvailable(newQty);
+                rm.updateEquipment(equipment);
+
+                affectedRows = stmt.executeUpdate();
+                return affectedRows;
+            } catch (SQLException e) {
+                JOptionPane.showMessageDialog(null, "Insertion failed: " + e.getMessage(), "Insert Status",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+        } else {
+            int available = (equipment != null) ? equipment.getQtyAvailable() : 0;
+            JOptionPane.showMessageDialog(null, "Not enough equipment available. Available quantity: " + available,
+                    "Insert Status", JOptionPane.WARNING_MESSAGE);
+        }
+        return affectedRows;
+    }
+
+    /**
+     * Logic for deleting a reservation equipment entry.
+     * Restores quantity to the Equipment table via Hibernate.
+     */
+    public int deleteReserveEquip(int reservationNum, String equipmentID) {
+        String sql = "DELETE FROM reservationequip WHERE reservationNum = ? AND equipId = ?";
+        int affectedRows = 0;
+        
+        EquipmentReserved equipReserved = readReservationNum(reservationNum, equipmentID);
+        
+        if (equipReserved != null) {
+            try (PreparedStatement stmt = myConn.prepareStatement(sql)) {
+                stmt.setInt(1, reservationNum);
+                stmt.setString(2, equipmentID);
+                
+                // Fetch current equipment and restore quantity via Hibernate
+                Equipment equipment = rm.readEquipment(equipmentID);
+                if (equipment != null) {
+                    equipment.setQtyAvailable(equipment.getQtyAvailable() + equipReserved.getEquipmentQty());
+                    rm.updateEquipment(equipment);
+                }
+
+                affectedRows = stmt.executeUpdate();
+            } catch (SQLException e) {
+                JOptionPane.showMessageDialog(null, "Deletion failed: " + e.getMessage(), "Delete Status",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+        }
+        return affectedRows;
+    }
+
+    public Reservation readReservation(int reservationNum) {
+        String sql = "SELECT * FROM reservation WHERE reservationNum = ?";
+        Reservation reservation = null;
+
+        try (PreparedStatement stmt = myConn.prepareStatement(sql)) {
+            stmt.setInt(1, reservationNum);
+
+            try (ResultSet result = stmt.executeQuery()) {
+                if (result.next()) {
+                    reservation = new Reservation(
+                            result.getString("userId"),
+                            result.getDate("reservationDate").toLocalDate(),
+                            result.getTime("startTime").toLocalTime(),
+                            result.getTime("endTime").toLocalTime(),
+                            result.getString("status"),
+                            result.getString("labId"),
+                            result.getString("seatId"),
+                            0, 
+                            reservationNum);
+
+                    // Pulling linked equipment using ResourcesManager (Hibernate)
+                    String sqlEquip = "SELECT equipId FROM reservationequip WHERE reservationNum = ?";
+                    try (PreparedStatement stmtEquip = myConn.prepareStatement(sqlEquip)) {
+                        stmtEquip.setInt(1, reservationNum);
+                        try (ResultSet resultEquip = stmtEquip.executeQuery()) {
+                            List<Equipment> equipmentList = new ArrayList<>();
+
+                            while (resultEquip.next()) {
+                                String id = resultEquip.getString("equipId");
+                                Equipment e = rm.readEquipment(id);
+                                if (e != null) equipmentList.add(e);
+                            }
+                            reservation.setEquipmentList(equipmentList);
+                        }
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
         return reservation;
     }
 
-    private void releaseResources(Reservation reservation) {
-        Session session = sessionFactory.openSession();
-        Transaction tx = null;
-        try {
-            tx = session.beginTransaction();
-        if (reservation == null) {
-            JOptionPane.showMessageDialog(null, "Release Reservation Resources", "Error Reservation object is null", JOptionPane.ERROR_MESSAGE);
-            throw new Exception("Release Reservation Resources: Reservation object is null");
-        }
-        SeatRecord seat = reservation.getSeat();
-        if (seat != null) {
-            seat.setStatus(EquipStatus.AVAILABLE.toString());
-            seat.setReservation(null);
-            session.merge(seat);
-        }else{
-            JOptionPane.showMessageDialog(null, "No seat to release", "Release Resources", JOptionPane.INFORMATION_MESSAGE);
-            throw new Exception("No seat to release");
-        }
-        if (reservation.getEquipmentList() != null) {
-            for (Equipment equipment : reservation.getEquipmentList()) {
-                if (equipment == null) {
-                    continue;
-                }
-                int qtyAvailable = equipment.getQtyAvailable();
-                equipment.setQtyAvailable(qtyAvailable + 1);
-                session.merge(equipment);
-            }
-        }
-        tx.commit();
-    }catch (Exception e) {
-        if (tx != null)
-            tx.rollback();
-        e.printStackTrace();
-    } finally {
-        session.flush();
-        session.close();
-    }
-}
-
-    private void reserveResources(Reservation reservation) {
-		if (reservation == null) {
-			return;
-		}
-        Session session = sessionFactory.openSession();
-        Transaction tx = null;
-        try{
-            tx = session.beginTransaction();
-        //Confirms seat
-		SeatRecord seat = reservation.getSeat();
-		if (seat.getStatus() != EquipStatus.BOOKED.toString()) {
-			seat.setStatus(EquipStatus.BOOKED.toString());
-			seat.setReservation(reservation);
-			session.merge(seat);
-            //loop to sellect equipment and update qty on hand and available
-			for (Equipment equipment : reservation.getEquipmentList()) {
-				if (equipment == null) {
-					continue;
-				}
-				int qtyAvailable = equipment.getQtyAvailable() ;
-				if (qtyAvailable > 0) {
-					equipment.setQtyOnHand(qtyAvailable - 1);
-					session.merge(equipment);
-				}else{
-                    JOptionPane.showMessageDialog(null, "Not enough equipment available", "Error", JOptionPane.ERROR_MESSAGE);
-                    throw new Exception("Not enough equipment available");
+    // Helper method used in delete logic
+    public EquipmentReserved readReservationNum(int reservationNum, String equipmentID) {
+        String sql = "SELECT * FROM reservationequip WHERE reservationNum = ? AND equipId = ?";
+        try (PreparedStatement stmt = myConn.prepareStatement(sql)) {
+            stmt.setInt(1, reservationNum);
+            stmt.setString(2, equipmentID);
+            try (ResultSet result = stmt.executeQuery()) {
+                if (result.next()) {
+                    return new EquipmentReserved(
+                        result.getInt("reservationNum"), 
+                        result.getString("equipId"), 
+                        result.getInt("equipmentQty")
+                    );
                 }
             }
-		}else {
-            JOptionPane.showMessageDialog(null, "Seat is already booked", "Error", JOptionPane.ERROR_MESSAGE);
-            throw new Exception("Seat is already booked");
-        }
-        tx.commit();
-    }catch (Exception e) {
-        if (tx != null)
-            tx.rollback();
-        e.printStackTrace();
-    } finally {
-        session.flush();
-        session.close();
-    }
-}
-    public void createReservation(Reservation reservation) {
-
-	    Session session = sessionFactory.openSession();
-	    Transaction transaction = null;
-
-	    try {
-	        transaction = session.beginTransaction();
-	        Lab lab = session.get(Lab.class, reservation.getLab().getLabId());
-	        SeatRecord seat = session.get(SeatRecord.class, reservation.getSeat().getSeatID());
-			seat.setStatus(EquipStatus.BOOKED.toString());
-			reservation.setSeat(seat);
-			session.merge(seat);
-            List<Equipment> reservedEquipment = new ArrayList<>(lab.getEquipmentList());
-            if (equipmentIds != null && !equipmentIds.isEmpty()) {
-                for (String equipId : equipmentIds) {
-                    Equipment equipment = session.get(Equipment.class, equipId);
-                    if (equipment == null) {
-                        continue;
-                    }
-                    int currentQtyOnHand = equipment.getQtyOnHa();
-                    if (currentQtyOnHand > 0) {
-                        equipment.setQtyOnHand(currentQtyOnHand - 1);
-                        int currentQtyAvailable = equipment.getQtyAvailable() ;
-                        equipment.setQtyAvailable(Math.max(0, currentQtyAvailable - 1));
-                        session.merge(equipment);
-                        reservedEquipment.add(equipment);
-                    }
-                }
-            }
-            reservation.setEquipmentList(reservedEquipment);
-
-            session.persist(reservation);
-            if (seat != null) {
-                session.merge(seat);
-            }
-	        transaction.commit();
-
-	        JOptionPane.showMessageDialog(null, "Reservation created successfully!");
-
-	    } catch (Exception e) {
-	        if (transaction != null) transaction.rollback();
-	        e.printStackTrace();
-			JOptionPane.showMessageDialog(null, "Failed to create reservation: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-	    } finally {
-	        session.close();
-	    }
-	}    
-    // DELETE WORKS
-    public void deleteReservation(int reservationId) {
-
-        Session session = sessionFactory.openSession();
-        Transaction transaction = null;
-
-        try {
-            transaction = session.beginTransaction();
-
-            Reservation reservation = findReservationByNumber(reservationId);
-
-            if (reservation != null) {
-                releaseResources(reservation);
-                session.remove(reservation);
-            }else {
-                JOptionPane.showMessageDialog(null, "Reservation not found.", "Error", JOptionPane.ERROR_MESSAGE);
-                throw new Exception("Reservation not found.");
-            }
-
-            transaction.commit();
-            JOptionPane.showMessageDialog(null, "Reservation deleted successfully!");
-
-        } catch (Exception e) {
-            if (transaction != null)
-                transaction.rollback();
+        } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            session.close();
         }
+        return null;
     }
 
-    //Admins Only
-	public void updateReservation(int reservationId, LocalDate reservationDate, LocalTime newStart,LocalTime newEnd,String newStatus) {
+    public int createReservation(Reservation reservation) {
+    String sql = "INSERT INTO reservation (reservationNum, userId, reservationDate, startTime, endTime, status, labId, seatId) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+    int affectedRows = 0;
+    
+    try (PreparedStatement stmt = myConn.prepareStatement(sql)) {
+        // ... (existing PreparedStatement mapping for the reservation table)
+        stmt.setInt(1, reservation.getReservationNum());
+        stmt.setString(2, reservation.getUserId());
+        stmt.setDate(3, Date.valueOf(reservation.getReservationDate()));
+        stmt.setTime(4, Time.valueOf(reservation.getStartTime()));
+        stmt.setTime(5, Time.valueOf(reservation.getEndTime()));
+        stmt.setString(6, reservation.getStatus());
+        stmt.setString(7, reservation.getLabId());
+        stmt.setString(8, reservation.getSeatId());
 
-    Session session = sessionFactory.openSession();
-    Transaction transaction = null;
-    try {
-        transaction = session.beginTransaction();
-        Reservation reservation = session.get(Reservation.class, reservationId);
+        affectedRows = stmt.executeUpdate();
 
-        if (reservation != null) {
-        	reservation.setReservationDate(LocalDate.now());
-            reservation.setStartTime(newStart);
-            reservation.setEndTime(newEnd);
-            reservation.setStatus(newStatus);
-            session.merge(reservation);
-        }
-        transaction.commit();
-        JOptionPane.showMessageDialog(null, "Reservation updated successfully!");
+        if (affectedRows > 0) {
+            // --- UTILIZING RESOURCES MANAGER (Hibernate) ---
+            
+            // 1. Fetch the Lab object from the database using Hibernate
+            Lab lab = rm.readLab(reservation.getLabId());
+            
+            if (lab != null) {
+                // 2. Find the specific seat in the lab's list and update it
+                for (SeatRecord seat : lab.getSeatDisplay()) {
+                    if (seat.getSeatID().equals(reservation.getSeatId())) {
+                        seat.setStatus("BOOKED");
+                        // If SeatRecord has these fields, update them:
+                        // seat.setReservationNum(reservation.getReservationNum());
+                        // seat.setStartTime(reservation.getStartTime());
+                        break; 
+                    }
+                }
+                // 3. Save the changes back to the database via Hibernate merge
+                rm.updateLab(lab);
+            }
 
-    } catch (Exception e) {
-        if (transaction != null) transaction.rollback();
-        e.printStackTrace();
-    } finally {
-        session.close();
-    }
-}
-    public void viewReservation(int reservationId) {
-            Reservation reservation = findReservationByNumber(reservationId);
-            if (reservation != null) {
-                JOptionPane.showMessageDialog(null, "Reservation Details:\n" +
-                        "Reservation ID: " + reservation.getReservationNum() + "\n" +
-                        "User: " + reservation.getUserId() + "\n" +
-                        "Date: " + reservation.getReservationDate() + "\n" +
-                        "Time: " + reservation.getStartTime() + " - " + reservation.getEndTime() + "\n" +
-                        "Lab: " + reservation.getLab().getLabId() + "\n" +
-                        "Seats: " + (reservation.getSeat() != null ? reservation.getSeat().getSeatID() : "N/A") + "\n" +
-                        "Status: " + reservation.getStatus(), "Reservation Details", JOptionPane.INFORMATION_MESSAGE);
-            } else {
-                JOptionPane.showMessageDialog(null, "Reservation not found.", "Error", JOptionPane.ERROR_MESSAGE);
+            // 4. Handle Equipment as before
+            for (Equipment equipment : reservation.getEquipmentList()) {
+                createReserveEquip(reservation.getReservationNum(), equipment.getEquipId(), reservation.getEquipmentQty());
             }
         }
+    } catch (SQLException e) {
+        JOptionPane.showMessageDialog(null, "Reservation Creation failed: " + e.getMessage());
+    }
+    return affectedRows;
+}
+
+    // --- Boilerplate and Main ---
+    
+    public static void main(String[] args) {
+    // 1. Initialization
+    new UserManager(); 
+    ResourcesManager resMngRM = new ResourcesManager(); // To fetch equipment
+    ReservationManager resMng = new ReservationManager();
+    
+    // Ensure the ID is unique/valid
+    int nextResId = ReservationManager.getnextReservationNum();
+
+    // 2. Prepare 3 Equipment objects from the database (Lab 1: L01)
+    // Based on your init code, IDs are E0101, E0102, E0103
+    List<Equipment> selectedEquipment = new ArrayList<>();
+    String[] idsToBook = {"E0101", "E0102", "E0103"};
+    
+    for (String id : idsToBook) {
+        Equipment e = resMngRM.readEquipment(id);
+        if (e != null) {
+            selectedEquipment.add(e);
+        }
     }
 
+    // 3. Create the Reservation object with the list and quantity per item
+    Reservation reservation = new Reservation(
+        "123",                          // userId
+        LocalDate.now(),                // reservationDate
+        LocalTime.now(),                // startTime
+        LocalTime.now().plusHours(1),   // endTime
+        "PENDING",                      // status
+        "L01",                          // labId
+        "A1",                           // seatId
+        selectedEquipment,              // The List of 3 items
+        2,                              // equipmentQty (Deduced 2 from EACH item)
+        nextResId                       // Generated Reservation ID
+    );
+
+    // 4. Execute the creation logic
+    int affectedRows = resMng.createReservation(reservation);
+
+    // 5. Verify the result
+    if (affectedRows > 0) {
+        System.out.println("Reservation " + nextResId + " created successfully.");
+        System.out.println("Seat A1 updated, Equipment quantity reduced by 2 for each item.");
+    } else {
+        System.out.println("Reservation failed.");
+    }
+}
+}

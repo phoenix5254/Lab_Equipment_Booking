@@ -7,73 +7,85 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
-import jakarta.persistence.*;
+import controller.ResourcesManager;
 
-
-@Entity
-@Table(name = "reservations")
-@IdClass(ReservationId.class)
 public class Reservation implements Serializable {
 	private static final long serialVersionUID = 1L;
-	@Id
     private int reservationNum;
     private String userId;
+    private String seatId;
+    private String labId;
     private LocalDate reservationDate;
-    @Id
     private LocalTime startTime;
     private LocalTime endTime;
     private String status;
-//
-    @ManyToOne
-    @JoinColumn(name = "labId")
-    private Lab lab;
-    
-    @OneToOne
-    private SeatRecord seat;
-
-    @ManyToMany
-    @JoinTable(
-        name = "reservation_equipment",
-        joinColumns = {
-            @JoinColumn(name = "reservationNum"),
-            @JoinColumn(name = "startTime")
-        },
-        inverseJoinColumns = @JoinColumn(name = "equipmentID")
-    )
     private List<Equipment> equipmentList;
+    private int equipmentQty;
 
-    
-    public Reservation(int reservationNum, String userId, LocalDate reservationDate, LocalTime startTime,
-			LocalTime endTime, String status, Lab lab, SeatRecord seat, List<Equipment> equipmentList) {
-		this.reservationNum = reservationNum;
+    static int reservationCounter = 0;
+
+     public Reservation() {
+        this.reservationNum =0;
+        this.userId = "";
+        this.reservationDate = LocalDate.now();
+        this.startTime = LocalTime.now();
+        this.endTime = LocalTime.now().plusHours(1);
+        this.status = "UNKNOWN";
+        this.labId = "";
+        this.seatId = "";
+        this.equipmentList = new ArrayList<>();
+    }
+
+    public Reservation(String userId, LocalDate reservationDate, LocalTime startTime,
+			LocalTime endTime, String status, String labId, String seatId, List<Equipment> equipmentList,int equipmentQty, int resNum) {
+		this.reservationNum = ++reservationCounter;
 		this.userId = userId;
 		this.reservationDate = reservationDate;
 		this.startTime = startTime;
 		this.endTime = endTime;
 		this.status = status;
-		this.lab = lab;
-		this.seat = seat;
+		this.labId = labId;
+		this.seatId = seatId;
 		this.equipmentList = equipmentList;
+        this.reservationNum = resNum;
+        this.equipmentQty = equipmentQty;
 	}
-    public Reservation(String userId, LocalDate reservationDate, LocalTime startTime,
-            LocalTime endTime, String status, Lab lab) {
-        this.userId = userId;
-        this.reservationDate = reservationDate;
-        this.startTime = startTime;
-        this.endTime = endTime;
-        this.status = status;
-        this.lab = lab;
-    }
-    
-    public Reservation() {
-        this.seat = new SeatRecord();
-        this.equipmentList = new ArrayList<>();
+     public Reservation(String userId, LocalDate reservationDate, LocalTime startTime,
+			LocalTime endTime, String status, String labId, String seatId,int equipmentQty, int resNum) {
+		this.reservationNum = ++reservationCounter;
+		this.userId = userId;
+		this.reservationDate = reservationDate;
+		this.startTime = startTime;
+		this.endTime = endTime;
+		this.status = status;
+		this.labId = labId;
+		this.seatId = seatId;
+		this.equipmentList = new ArrayList<>();
+        this.reservationNum = resNum;
+        this.equipmentQty = equipmentQty;
+	}
+    public Reservation(Reservation reservation) {
+        this.userId = reservation.userId;
+        this.reservationDate = reservation.reservationDate;
+        this.startTime = reservation.startTime;
+        this.endTime = reservation.endTime;
+        this.status = reservation.status;
+        this.labId = reservation.getLabId();
+        this.seatId = reservation.getSeatId();
+        this.equipmentList = reservation.getEquipmentList();
+        this.reservationNum = reservation.getReservationNum();
+        this.equipmentQty = reservation.getEquipmentQty();
     }
 
-	
-
-    public long getReservationNum() {
+    public int getReservationNum() {
         return reservationNum;
+    }
+    public int getEquipmentQty() {
+        return equipmentQty;
+    }
+
+    public void setEquipmentQty(int equipmentQty) {
+        this.equipmentQty = equipmentQty;
     }
 
     public String getUserId() {
@@ -108,20 +120,20 @@ public class Reservation implements Serializable {
         this.endTime = endTime;
     }
 
-    public Lab getLab() {
-        return lab;
+    public String getLabId() {
+        return labId;
     }
 
-    public void setLab(Lab lab) {
-        this.lab = lab;
+    public void setLabId(String labId) {
+        this.labId = labId;
     }
 
-    public SeatRecord getSeat() {
-        return seat;
+    public String getSeatId() {
+        return seatId;
     }
 
-    public void setSeat(SeatRecord seat) {
-        this.seat = seat;
+    public void setSeat(String seat) {
+        this.seatId = seat;
     }
 
     public List<Equipment> getEquipmentList() {
@@ -139,12 +151,22 @@ public class Reservation implements Serializable {
     public void setStatus(String status) {
         this.status = status;
     }
+    public Equipment getEquipment(String Equipid) {
+        for (int i = 0; i < equipmentList.size(); i++) {
+            if (equipmentList.get(i).getEquipId().equals(Equipid)) {
+                ResourcesManager eR= new ResourcesManager();
+                return eR.readEquipment(Equipid);
+            }
+        }
+        return null;
+        
+    }
 
 	@Override
 	public String toString() {
 		return "Reservation [reservationNum=" + reservationNum + ", userId=" + userId + ", reservationDate="
 				+ reservationDate + ", startTime=" + startTime + ", endTime=" + endTime + ", status=" + status
-				+ ", lab=" + lab + ", seat=" + seat + ", equipmentList=" + equipmentList + "]";
+				+ ", lab=" + labId + ", seat=" + seatId + ", equipmentList=" + equipmentList + "]";
 	}
     
 }

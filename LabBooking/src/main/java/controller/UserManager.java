@@ -14,7 +14,7 @@ public class UserManager {
 
         if (myConn == null) {
             try {
-                myConn = DriverManager.getConnection(url, "root", "usbw");
+                myConn = DriverManager.getConnection(url, "root", "");
             } catch (SQLException e) {
                 e.printStackTrace();
             }

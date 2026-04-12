@@ -7,7 +7,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinColumns;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
@@ -15,7 +14,7 @@ import model.Enums.EquipStatus;
 
 
 @Entity
-@Table(name = "SeatsRecords")
+@Table(name = "seatsrecords")
 public class SeatRecord implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
@@ -23,13 +22,7 @@ public class SeatRecord implements Serializable {
     @Column(name = "seatID")
     private String seatID;
     @ManyToOne
-    @JoinColumns({
-        @JoinColumn(name = "reservationNum"),
-        @JoinColumn(name = "startTime")
-    })
-    private Reservation reservation;
-    @ManyToOne
-    @JoinColumn(name = "lab") // This tells Hibernate to use your actual column name
+    @JoinColumn(name = "labId") // This tells Hibernate to use your actual column name
     private Lab lab;
     private String status;
   
@@ -56,9 +49,9 @@ public class SeatRecord implements Serializable {
         return lab;
     }
     
-    public void setReservation(Reservation reservation) {
+    /*public void setReservation(Reservation reservation) {
     	this.reservation = reservation;
-    }
+    }*/
 
     public void setLab(Lab lab) {
         this.lab = lab;
@@ -79,5 +72,6 @@ public class SeatRecord implements Serializable {
     public void setStatus(String status) {
         this.status = status;
     }
+    
 
 }

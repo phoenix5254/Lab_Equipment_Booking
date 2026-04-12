@@ -8,6 +8,7 @@ import java.util.List;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
@@ -23,8 +24,8 @@ public class Lab implements Seats {
     private String labName;
     private String location;
     private int seatCapacity; // number of seats in the lab
-    @OneToMany(mappedBy = "lab", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<SeatRecord> seatDisplay = new ArrayList<>();// all records are adjusted with the lab they belong to
+   @OneToMany(mappedBy = "lab", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+private List<SeatRecord> seatDisplay;// all records are adjusted with the lab they belong to
 
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "lab") // one lab has many equipment items
     private List<Equipment> equipmentList = new ArrayList<>();

@@ -229,10 +229,44 @@ public class ResourcesManager extends Equipment {
             JOptionPane.showMessageDialog(null, "Error initializing data: " + e.getMessage(), "Initialization Status",
                     JOptionPane.ERROR_MESSAGE);
         }
+    }public static void truncateDatabase() {
+    try (Session session = factory.openSession()) {
+        Transaction tx = session.beginTransaction();
+        
+        try {
+            // 1. Disable foreign key checks so we can wipe tables in any order
+            session.createNativeMutationQuery("SET FOREIGN_KEY_CHECKS = 0").executeUpdate();
+
+            // 2. Clear all tables involved in your system
+            // Use the actual table names as defined in your @Table annotations or DB
+            session.createNativeMutationQuery("TRUNCATE TABLE reservationequip").executeUpdate();
+            session.createNativeMutationQuery("TRUNCATE TABLE reservation").executeUpdate();
+            session.createNativeMutationQuery("TRUNCATE TABLE equipment").executeUpdate();
+            session.createNativeMutationQuery("TRUNCATE TABLE seatsRecords").executeUpdate();
+            session.createNativeMutationQuery("TRUNCATE TABLE labs").executeUpdate();
+
+            // 3. Re-enable foreign key checks
+            session.createNativeMutationQuery("SET FOREIGN_KEY_CHECKS = 1").executeUpdate();
+            
+            tx.commit();
+            
+            JOptionPane.showMessageDialog(null, "Database truncated successfully", 
+                    "Database Status", JOptionPane.INFORMATION_MESSAGE);
+            
+        } catch (Exception e) {
+            if (tx != null) tx.rollback();
+            JOptionPane.showMessageDialog(null, 
+                "Something went wrong truncating the database: " + e.getMessage(),
+                "Database Status", JOptionPane.ERROR_MESSAGE);
+        }
+    } catch (Exception e) {
+        e.printStackTrace();
     }
+}
 
     public static void main(String[] args) {
         ResourcesManager manager = new ResourcesManager();
+      truncateDatabase();
         initializeResourceData();
     }
 
