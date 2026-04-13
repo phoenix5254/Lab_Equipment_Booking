@@ -121,32 +121,22 @@ public class UserManager {
         return affectedRows;
     }
 
-    /*
-     * public int createReservation(String reservationNum,String userId,String
-     * resourceID,Time startTime,Time endTime,String status) {
-     * 
-     * String sql = "INSERT INTO reservations "
-     * + "(reservationNum, userID, resourceID, Date, startTime, endTime, status) "
-     * + "VALUES (?, ?, ?, NOW(), ?, ?, ?)";
-     * 
-     * int affectedRows = 0;
-     * 
-     * try (PreparedStatement stmt = myConn.prepareStatement(sql)) {
-     * 
-     * stmt.setString(1, reservationNum);
-     * stmt.setString(2, userId);
-     * stmt.setString(3, resourceID);
-     * stmt.setTime(4, startTime);
-     * stmt.setTime(5, endTime);
-     * stmt.setString(6, status);
-     * 
-     * affectedRows = stmt.executeUpdate();
-     * 
-     * } catch (SQLException e) {
-     * e.printStackTrace();
-     * }
-     * 
-     * return affectedRows;
-     * }
-     */
+    //only admins may update users role function return true if admin
+   public boolean readRole(String userID) {
+        String sql = "SELECT role FROM users WHERE userID = ?";
+        try (PreparedStatement stmt = myConn.prepareStatement(sql)) {
+            stmt.setString(1, userID);
+            try (ResultSet result = stmt.executeQuery()) {
+                if (result.next()) {
+                    return result.getString("role").equals("ADMIN");
+                }
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(null,
+                    "Search failed: " + e.getMessage(),
+                    "Search Status",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+        return false;
+    }
 }

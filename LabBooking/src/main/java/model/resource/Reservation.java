@@ -7,6 +7,7 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import controller.ReservationManager;
 import controller.ResourcesManager;
 
 public class Reservation implements Serializable {
@@ -20,7 +21,7 @@ public class Reservation implements Serializable {
     private LocalTime endTime;
     private String status;
     private List<Equipment> equipmentList;
-    private int equipmentQty;
+    private int[] equipmentQty;
 
     static int reservationCounter = 0;
 
@@ -34,10 +35,11 @@ public class Reservation implements Serializable {
         this.labId = "";
         this.seatId = "";
         this.equipmentList = new ArrayList<>();
+        equipmentQty = null;
     }
 
     public Reservation(String userId, LocalDate reservationDate, LocalTime startTime,
-			LocalTime endTime, String status, String labId, String seatId, List<Equipment> equipmentList,int equipmentQty, int resNum) {
+			LocalTime endTime, String status, String labId, String seatId, List<Equipment> equipmentList,int[] equipmentQty, int resNum) {
 		this.reservationNum = ++reservationCounter;
 		this.userId = userId;
 		this.reservationDate = reservationDate;
@@ -51,7 +53,7 @@ public class Reservation implements Serializable {
         this.equipmentQty = equipmentQty;
 	}
      public Reservation(String userId, LocalDate reservationDate, LocalTime startTime,
-			LocalTime endTime, String status, String labId, String seatId,int equipmentQty, int resNum) {
+			LocalTime endTime, String status, String labId, String seatId,int[] equipmentQty, int resNum) {
 		this.reservationNum = ++reservationCounter;
 		this.userId = userId;
 		this.reservationDate = reservationDate;
@@ -80,11 +82,11 @@ public class Reservation implements Serializable {
     public int getReservationNum() {
         return reservationNum;
     }
-    public int getEquipmentQty() {
+    public int[] getEquipmentQty() {
         return equipmentQty;
     }
 
-    public void setEquipmentQty(int equipmentQty) {
+    public void setEquipmentQty(int[] equipmentQty) {
         this.equipmentQty = equipmentQty;
     }
 
@@ -164,9 +166,9 @@ public class Reservation implements Serializable {
 
 	@Override
 	public String toString() {
-		return "Reservation [reservationNum=" + reservationNum + ", userId=" + userId + ", reservationDate="
-				+ reservationDate + ", startTime=" + startTime + ", endTime=" + endTime + ", status=" + status
-				+ ", lab=" + labId + ", seat=" + seatId + ", equipmentList=" + equipmentList + "]";
+		return "Reservation\nReservationNum:" + reservationNum + "\n userId:" + userId + "\n reservationDate:"
+				+ reservationDate + "\n startTime:" + startTime + "\n endTime:" + endTime + "\n status:" + status
+				+ "\n lab:" + labId + "\n seat:" + seatId + "\nEquipment List: "+ "\n" + ReservationManager.getReservationEquipmentString(reservationNum);
 	}
     
 }

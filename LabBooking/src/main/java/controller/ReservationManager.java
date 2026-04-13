@@ -2,16 +2,12 @@ package controller;
 
 import java.sql.Connection;
 import java.sql.Date;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Time;
-import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
-
 import javax.swing.JOptionPane;
 
 import model.resource.Equipment;
@@ -19,49 +15,21 @@ import model.resource.EquipmentReserved;
 import model.resource.Lab;
 import model.resource.Reservation;
 import model.resource.SeatRecord;
-import model.users.User;
 
 public class ReservationManager {
     private static Connection myConn;
     private static int reservationNum;
-    private Reservation rs;
-    private EquipmentReserved er;
-
-    // Integrated ResourcesManager for Hibernate operations
     private ResourcesManager rm;
 
     public ReservationManager() {
-        UserManager um = new UserManager();
+        new UserManager(); // Initialize connection via UserManager
         myConn = UserManager.getConnection();
-
-        // Initialize the Hibernate-based resource manager
         rm = new ResourcesManager();
-
         reservationNum = getnextReservationNum();
-        rs = new Reservation();
     }
 
-    public ReservationManager(String userId, LocalDate reservationDate, LocalTime startTime,
-            LocalTime endTime, String status, String labId, String seatId, List<Equipment> equipmentList,
-            int equipQty) {
-        rm = new ResourcesManager();
-        rs = new Reservation(userId, reservationDate, startTime, endTime, status, labId, seatId, equipmentList,
-                equipQty, reservationNum);
-
-        // Safety check for empty list before accessing index
-        if (!equipmentList.isEmpty()) {
-            er = new EquipmentReserved(rs.getReservationNum(), equipmentList.get(0).getEquipId(), equipQty);
-        }
-    }
-
-    public ReservationManager(Reservation rs) {
-        this.rm = new ResourcesManager();
-        this.rs = rs;
-    }
-
-    // --- Database Logic ---
-
-    static int getnextReservationNum() {
+    // Get the next available reservation number from database to show persistent ID
+       static int getnextReservationNum() {
         String sql = "SELECT MAX(reservationNum) FROM reservation";
         try (PreparedStatement stmt = myConn.prepareStatement(sql)) {
             ResultSet rs = stmt.executeQuery();
@@ -74,74 +42,127 @@ public class ReservationManager {
         return 1;
     }
 
-    /**
-     * Creates a reservation for equipment.
-     * Uses Hibernate (rm) to update the Equipment entity's state.
-     */
     public int createReserveEquip(int reservationNum, String equipmentID, int equipmentQty) {
         String sql = "INSERT INTO reservationequip(reservationNum, equipId, equipQty) VALUES (?, ?, ?)";
-
         try (PreparedStatement stmt = myConn.prepareStatement(sql)) {
             stmt.setInt(1, reservationNum);
             stmt.setString(2, equipmentID);
             stmt.setInt(3, equipmentQty);
 
-            // Fetch current equipment and update quantity via Hibernate
             Equipment equipment = rm.readEquipment(equipmentID);
-            int newQty = equipment.getQtyAvailable() - equipmentQty;
-            equipment.setQtyAvailable(newQty);
-            rm.updateEquipment(equipment); // This updates the DB table
-            int result = stmt.executeUpdate();
-            // If your database doesn't auto-commit, you need this:
-            // myConn.commit();
-
-            return result;
+            if (equipment != null) {// decrements available quantity in equipment   
+                int newQty = equipment.getQtyAvailable() - equipmentQty;
+                equipment.setQtyAvailable(newQty);
+                rm.updateEquipment(equipment); 
+            }
+            return stmt.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
             return 0;
         }
     }
 
-    /**
-     * Logic for deleting a reservation equipment entry.
-     * Restores quantity to the Equipment table via Hibernate.
-     */
+    //update method can be use for decrement or increment
+    // zero as the new value means release resource and + values reserve resources
+    public int updateReserveEquip(int reservationNum, String equipmentID, int newQty) {
+        EquipmentReserved oldRecord = readReservedEquipmentForReservation(reservationNum, equipmentID);
+        if (oldRecord == null) {
+            System.out.println("No existing reservation found for this equipment.");
+            return 0;
+        }
+
+        int oldQty = oldRecord.getEquipmentQty();
+        int difference = newQty - oldQty;// difference between new quantity and old quantity
+
+        String sql = "UPDATE reservationequip SET equipQty=? WHERE equipId=? AND reservationNum=?";
+        int affectedRows = 0;
+
+        try (PreparedStatement stmt = myConn.prepareStatement(sql)) {
+            stmt.setInt(1, newQty);
+            stmt.setString(2, equipmentID);
+            stmt.setInt(3, reservationNum);
+            affectedRows = stmt.executeUpdate();
+
+            if (affectedRows > 0) {
+                Equipment equipment = rm.readEquipment(equipmentID);
+                if (equipment != null) {
+                    equipment.setQtyAvailable(equipment.getQtyAvailable() - difference);// decrements available quantity in equipment
+                    rm.updateEquipment(equipment);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return affectedRows;
+    }
+
     public int deleteReserveEquip(int reservationNum, String equipmentID) {
         String sql = "DELETE FROM reservationequip WHERE reservationNum = ? AND equipId = ?";
         int affectedRows = 0;
-
-        EquipmentReserved equipReserved = readReservationNum(reservationNum, equipmentID);
+        EquipmentReserved equipReserved = readReservedEquipmentForReservation(reservationNum, equipmentID);
 
         if (equipReserved != null) {
             try (PreparedStatement stmt = myConn.prepareStatement(sql)) {
                 stmt.setInt(1, reservationNum);
                 stmt.setString(2, equipmentID);
 
-                // Fetch current equipment and restore quantity via Hibernate
                 Equipment equipment = rm.readEquipment(equipmentID);
-                if (equipment != null) {
+                if (equipment != null) {// increments available quantity in equipment
                     equipment.setQtyAvailable(equipment.getQtyAvailable() + equipReserved.getEquipmentQty());
                     rm.updateEquipment(equipment);
                 }
-
                 affectedRows = stmt.executeUpdate();
             } catch (SQLException e) {
-                JOptionPane.showMessageDialog(null, "Deletion failed: " + e.getMessage(), "Delete Status",
-                        JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(null, "Deletion failed: " + e.getMessage());
             }
         }
         return affectedRows;
     }
+    static public String getReservationEquipmentString(int resNum) {
+    StringBuilder sb = new StringBuilder();
+    String sql = "SELECT * FROM reservationequip WHERE reservationNum = ?";
+    
+    sb.append("Details for Reservation ID: ").append(resNum).append("\n");
+    sb.append(String.format("%-15s | %-10s%n", "Equipment ID", "Quantity"));
+    sb.append("------------------------------------------\n");
 
+    try (PreparedStatement stmt = myConn.prepareStatement(sql)) {
+        stmt.setInt(1, resNum);
+        
+        try (ResultSet result = stmt.executeQuery()) {
+            int count = 0;
+            while (result.next()) {
+                String eId = result.getString("equipId");
+                int qty = result.getInt("equipQty");
+
+                sb.append(String.format("%-15s | %-10d%n", eId, qty));
+                count++;
+            }
+
+            if (count == 0) {
+                return "No equipment found for Reservation #" + resNum;
+            }
+
+            sb.append("------------------------------------------\n");
+            sb.append("Total Items: ").append(count);
+        }
+    } catch (SQLException e) {
+        sb.append("Database Error: ").append(e.getMessage());
+        e.printStackTrace();
+    }
+
+    return sb.toString();
+}
     public Reservation readReservation(int reservationNum) {
         String sql = "SELECT * FROM reservation WHERE reservationNum = ?";
         Reservation reservation = null;
 
         try (PreparedStatement stmt = myConn.prepareStatement(sql)) {
             stmt.setInt(1, reservationNum);
-
             try (ResultSet result = stmt.executeQuery()) {
                 if (result.next()) {
+                    // Note: We leave the quantity array empty initially and fill it via the join
+                    // table
                     reservation = new Reservation(
                             result.getString("userId"),
                             result.getDate("reservationDate").toLocalDate(),
@@ -150,19 +171,16 @@ public class ReservationManager {
                             result.getString("status"),
                             result.getString("labId"),
                             result.getString("seatId"),
-                            0,
+                            null, // Quantity array to be populated if needed
                             reservationNum);
 
-                    // Pulling linked equipment using ResourcesManager (Hibernate)
                     String sqlEquip = "SELECT equipId FROM reservationequip WHERE reservationNum = ?";
                     try (PreparedStatement stmtEquip = myConn.prepareStatement(sqlEquip)) {
                         stmtEquip.setInt(1, reservationNum);
                         try (ResultSet resultEquip = stmtEquip.executeQuery()) {
                             List<Equipment> equipmentList = new ArrayList<>();
-
                             while (resultEquip.next()) {
-                                String id = resultEquip.getString("equipId");
-                                Equipment e = rm.readEquipment(id);
+                                Equipment e = rm.readEquipment(resultEquip.getString("equipId"));
                                 if (e != null)
                                     equipmentList.add(e);
                             }
@@ -177,8 +195,7 @@ public class ReservationManager {
         return reservation;
     }
 
-    // Helper method used in delete logic
-    public EquipmentReserved readReservationNum(int reservationNum, String equipmentID) {
+    public EquipmentReserved readReservedEquipmentForReservation(int reservationNum, String equipmentID) {
         String sql = "SELECT * FROM reservationequip WHERE reservationNum = ? AND equipId = ?";
         try (PreparedStatement stmt = myConn.prepareStatement(sql)) {
             stmt.setInt(1, reservationNum);
@@ -188,7 +205,7 @@ public class ReservationManager {
                     return new EquipmentReserved(
                             result.getInt("reservationNum"),
                             result.getString("equipId"),
-                            result.getInt("equipmentQty"));
+                            result.getInt("equipQty"));
                 }
             }
         } catch (SQLException e) {
@@ -196,12 +213,14 @@ public class ReservationManager {
         }
         return null;
     }
+    
 
     public int createReservation(Reservation reservation) {
         String sql = "INSERT INTO reservation (reservationNum, userId, reservationDate, startTime, endTime, status, labId, seatId) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         int affectedRows = 0;
 
         try (PreparedStatement stmt = myConn.prepareStatement(sql)) {
+            // ... (Binding parameters 1 through 8 as before) ...
             stmt.setInt(1, reservation.getReservationNum());
             stmt.setString(2, reservation.getUserId());
             stmt.setDate(3, Date.valueOf(reservation.getReservationDate()));
@@ -212,7 +231,6 @@ public class ReservationManager {
             stmt.setString(8, reservation.getSeatId());
 
             affectedRows = stmt.executeUpdate();
-
             if (affectedRows > 0) {
                 // 1. Update Seat Status via Hibernate
                 Lab lab = rm.readLab(reservation.getLabId());
@@ -233,37 +251,128 @@ public class ReservationManager {
                         }
                     }
                     rm.updateLab(lab); // Sync remaining changes via Hibernate
-                }
+                    List<Equipment> equipList = reservation.getEquipmentList();
+                    int[] qtys = reservation.getEquipmentQty();
 
-                // 2. Handle Equipment
-                List<Equipment> equipList = reservation.getEquipmentList();
-                if (equipList != null && !equipList.isEmpty()) {
-                    for (Equipment equipment : equipList) {
-                        createReserveEquip(
-                                reservation.getReservationNum(),
-                                equipment.getEquipId(),
-                                reservation.getEquipmentQty());
+                    // CRITICAL CHECK: Ensure list and array match
+                    if (equipList != null && qtys != null) {
+                        if (equipList.size() != qtys.length) {
+                            System.err.println("CRITICAL ERROR: Equipment List size (" + equipList.size() +
+                                    ") does not match Quantity Array size (" + qtys.length + ")");
+                            return 0;
+                        }
+
+                        for (int i = 0; i < equipList.size(); i++) {
+                            // This maps List[i] to int[i]
+                            createReserveEquip(
+                                    reservation.getReservationNum(),
+                                    equipList.get(i).getEquipId(),
+                                    qtys[i]);
+                        }
                     }
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Integrity Error: Check if " + reservation.getLabId() + " exists in labs table.");
-            e.printStackTrace();
+            System.err.println("SQL Error Code: " + e.getErrorCode());
+            e.printStackTrace(); // This will tell you if it's a Duplicate Key or Foreign Key error
         }
         return affectedRows;
     }
 
+    public int updateReservationStatus(int resNum, String status) {
+        String sql = "UPDATE reservation SET status = ? WHERE reservationNum = ?";
+        try (PreparedStatement stmt = myConn.prepareStatement(sql)) {
+            stmt.setString(1, status);
+            stmt.setInt(2, resNum);
+            return stmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return 0;
+        }
+    }
+
+    public int deleteReservation(int resNum) {
+    int affectedRows = 0;
+    
+    try {
+        // 1. Restore Equipment Quantities & Delete from reservationequip
+        // We fetch all equipment associated with this reservation first
+        String fetchEquipSql = "SELECT equipId, equipQty FROM reservationequip WHERE reservationNum = ?";
+        try (PreparedStatement fetchStmt = myConn.prepareStatement(fetchEquipSql)) {
+            fetchStmt.setInt(1, resNum);
+            ResultSet rs = fetchStmt.executeQuery();
+            
+            while (rs.next()) {
+                String eId = rs.getString("equipId");
+                int qtyReserved = rs.getInt("equipQty");
+                
+                // Use Hibernate (rm) to increase the inventory back
+                Equipment equipment = rm.readEquipment(eId);
+                if (equipment != null) {
+                    equipment.setQtyAvailable(equipment.getQtyAvailable() + qtyReserved);
+                    rm.updateEquipment(equipment);
+                }
+            }
+        }
+
+        // Now truncate (delete) the links in the mapping table
+        String deleteMappingSql = "DELETE FROM reservationequip WHERE reservationNum = ?";
+        try (PreparedStatement delMapStmt = myConn.prepareStatement(deleteMappingSql)) {
+            delMapStmt.setInt(1, resNum);
+            delMapStmt.executeUpdate();
+        }
+
+        // 2. Change Seat back to AVAILABLE
+        // First, we need to know WHICH seat and lab this reservation was using
+        Reservation resRecord = readReservation(resNum);
+        if (resRecord != null) {
+            String updateSeatSql = "UPDATE seatsrecords SET status = 'AVAILABLE', reservationNum = NULL " +
+                                   "WHERE seatID = ? AND labId = ?";
+            try (PreparedStatement seatStmt = myConn.prepareStatement(updateSeatSql)) {
+                seatStmt.setString(1, resRecord.getSeatId());
+                seatStmt.setString(2, resRecord.getLabId());
+                seatStmt.executeUpdate();
+            }
+            
+            // Sync the Lab object via Hibernate if necessary
+            Lab lab = rm.readLab(resRecord.getLabId());
+            if (lab != null) {
+                for (SeatRecord s : lab.getSeatDisplay()) {
+                    if (s.getSeatID().equals(resRecord.getSeatId())) {
+                        s.setStatus("AVAILABLE");
+                        break;
+                    }
+                }
+                rm.updateLab(lab);
+            }
+        }
+
+        // 3. Delete the main Reservation record
+        String deleteResSql = "DELETE FROM reservation WHERE reservationNum = ?";
+        try (PreparedStatement mainDelStmt = myConn.prepareStatement(deleteResSql)) {
+            mainDelStmt.setInt(1, resNum);
+            affectedRows = mainDelStmt.executeUpdate();
+        }
+
+        // If autocommit is false, commit the whole transaction
+        // myConn.commit();
+        System.out.println("Reservation " + resNum + " deleted and resources restored.");
+
+    } catch (SQLException e) {
+        System.err.println("Error during reservation deletion: " + e.getMessage());
+        // myConn.rollback(); 
+    }
+    
+    return affectedRows;
+}
     public static void main(String[] args) {
-        new UserManager();
-        ResourcesManager resRM = new ResourcesManager();
+        // 1. Initialize managers
         ReservationManager resMng = new ReservationManager();
+        ResourcesManager resRM = new ResourcesManager();
 
-        // 1. Get the REAL next ID from the DB
-        int nextResId = ReservationManager.getnextReservationNum();
-
-        // 2. Fetch the 3 equipment items from the database
+       /*/ // 2. Fetch specific equipment from the database
         List<Equipment> selectedEquipment = new ArrayList<>();
-        String[] idsToBook = { "E0101", "E0102", "E0103" }; // Ensure these match your init data
+        String[] idsToBook = { "E0101", "E0102", "E0103" };
 
         for (String id : idsToBook) {
             Equipment e = resRM.readEquipment(id);
@@ -272,16 +381,37 @@ public class ReservationManager {
             }
         }
 
-        // 3. Create the Reservation object with the populated list
-        Reservation reservation = new Reservation(
-                "123", LocalDate.now(), LocalTime.now(), LocalTime.now().plusHours(1),
-                "PENDING", "L01", "A1",
-                selectedEquipment, // PASS THE LIST HERE
-                2, // Quantity per item
-                nextResId // Use the dynamic ID
+        // 3. Define parallel quantities (e.g., 1 of E0101, 2 of E0102, 5 of E0103)
+        int[] quantities = { 1, 2, 5 };
+
+        // 4. Create the Reservation object
+        // We use the next ID from the database
+        int nextId = ReservationManager.getnextReservationNum();
+
+        Reservation newRes = new Reservation(
+                "123", // userId
+                LocalDate.now(), // date
+                LocalTime.of(10, 0), // startTime (10:00 AM)
+                LocalTime.of(12, 0), // endTime (12:00 PM)
+                "PENDING", // status
+                "L01", // labId
+                "A1", // seatId
+                selectedEquipment, // List<Equipment>
+                quantities, // int[]
+                nextId // resNum
         );
 
-        // 4. Run the creation
-        resMng.createReservation(reservation);
-    }
+        // 5. Execute the creation logic
+        int result = resMng.createReservation(newRes);
+
+        if (result > 0) {
+            System.out.println("Reservation #" + nextId + " created successfully!");
+            // Verify by reading it back
+            System.out.println(resMng.readReservation(nextId));
+        } else {
+            System.out.println("Failed to create reservation.");
+        }
+    }*/
+   //System.out.println(resMng.deleteReservation(1));
+}
 }

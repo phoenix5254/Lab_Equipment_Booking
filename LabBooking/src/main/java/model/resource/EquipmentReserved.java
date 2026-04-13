@@ -33,13 +33,12 @@ public class EquipmentReserved {
     public int getEquipmentQty() {
         return equipmentQty;
     }
-    private void setEquipmentQty(int equipmentQty) {
+    public void setEquipmentQty(int equipmentQty) {
         this.equipmentQty = equipmentQty;
     }
     @Override
     public String toString() {
-        return "EquipmentReserved [getReservationNum()=" + getReservationNum() + ", getEquipmentID()="
-                + getEquipmentID() + ", getEquipmentQty()=" + getEquipmentQty() + "]";
+        return "EquipmentReserved:"+"/nReservationNum:" + getReservationNum() + "\n EquipmentID:"+ getEquipmentID() + "\nEquipmentQty:" + getEquipmentQty() + "\n";
     }
     
 
