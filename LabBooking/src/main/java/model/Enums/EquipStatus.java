@@ -1,5 +1,5 @@
 package model.Enums;
 
 public enum EquipStatus {
-    AVAILABLE,BOOKED,UNKNOWN,MAINTENANCE;
+    AVAILABLE,BOOKED,UNKNOWN, UNAVAILABLE, MAINTENANCE;
 }
