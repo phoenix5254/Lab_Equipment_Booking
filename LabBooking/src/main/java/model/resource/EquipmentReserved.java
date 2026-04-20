@@ -1,7 +1,5 @@
 package model.resource;
 
-
-
 public class EquipmentReserved {
     public int reservationNum;
     private String equipmentID;
@@ -33,12 +31,13 @@ public class EquipmentReserved {
     public int getEquipmentQty() {
         return equipmentQty;
     }
-    public void setEquipmentQty(int equipmentQty) {
+    private void setEquipmentQty(int equipmentQty) {
         this.equipmentQty = equipmentQty;
     }
     @Override
     public String toString() {
-        return "EquipmentReserved:"+"/nReservationNum:" + getReservationNum() + "\n EquipmentID:"+ getEquipmentID() + "\nEquipmentQty:" + getEquipmentQty() + "\n";
+        return "EquipmentReserved [getReservationNum()=" + getReservationNum() + ", getEquipmentID()="
+                + getEquipmentID() + ", getEquipmentQty()=" + getEquipmentQty() + "]";
     }
     
 
